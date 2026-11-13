@@ -49,7 +49,16 @@ import {
   toNumber,
 } from '../lib/format';
 
-const PRESET_LIST = [PRESETS.thisYear, PRESETS.lastYear, PRESETS.last12m, PRESETS.all];
+const PRESET_LIST = [
+  PRESETS.today,
+  PRESETS.last1w,
+  PRESETS.last1m,
+  PRESETS.qtd,
+  PRESETS.thisYear,
+  PRESETS.lastYear,
+  PRESETS.last12m,
+  PRESETS.all,
+];
 
 /** from~to 사이 모든 'YYYY-MM' (최대 10년) */
 const monthsBetween = (from: string, to: string): string[] => {
