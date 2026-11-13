@@ -50,10 +50,15 @@ export const PRESETS: Record<string, RangePreset> = {
     label: '한달',
     range: () => ({ from: dayjs().subtract(1, 'month').add(1, 'day').format(ISO), to: today() }),
   },
-  last3m: {
-    key: 'last3m',
+  /** 이번 분기 시작일(1·4·7·10월 1일) ~ 오늘 */
+  qtd: {
+    key: 'qtd',
     label: '분기',
-    range: () => ({ from: dayjs().subtract(3, 'month').add(1, 'day').format(ISO), to: today() }),
+    range: () => {
+      const monthStart = dayjs().startOf('month');
+      const quarterStart = monthStart.month(monthStart.month() - (monthStart.month() % 3));
+      return { from: quarterStart.format(ISO), to: today() };
+    },
   },
   last12m: {
     key: 'last12m',

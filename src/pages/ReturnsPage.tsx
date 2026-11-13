@@ -49,7 +49,7 @@ const PRESET_LIST = [
   PRESETS.today,
   PRESETS.last1w,
   PRESETS.last1m,
-  PRESETS.last3m,
+  PRESETS.qtd,
   PRESETS.ytd,
   PRESETS.last12m,
   PRESETS.last3y,
