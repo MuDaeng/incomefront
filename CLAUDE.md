@@ -62,3 +62,4 @@ Google login is a full-page redirect to `${API_URL}/auth/google`. The backend re
 - The backend's CORS origin is its `FRONTEND_URL` env var. It must be `http://localhost:3000` for local login and cookies to work.
 - `/balance/returns` requires both `from` and `to`. `/balance/dividends` accepts either or neither; omitting `to` includes upcoming payments.
 - Selling a purchase lot is identified by `(securityId, purchaseDate, sequence)`, taken from `/balance/purchases`.
+- `DELETE /balance/purchases?securityId&purchaseDate&sequence` (204) deletes one mis-registered lot, sold ones too (`useDeletePurchase`). When it was the security's last lot the backend also drops it from the holdings, so the detail page navigates back to `/`. Remaining lots keep their sequences.

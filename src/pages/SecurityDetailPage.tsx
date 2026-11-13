@@ -1,5 +1,6 @@
 import Add from '@mui/icons-material/Add';
 import ArrowBack from '@mui/icons-material/ArrowBack';
+import DeleteOutline from '@mui/icons-material/DeleteOutlined';
 import {
   Box,
   Button,
@@ -24,11 +25,12 @@ import {
 import { LineChart } from '@mui/x-charts/LineChart';
 import dayjs from 'dayjs';
 import { useMemo, useState } from 'react';
-import { Link as RouterLink, useParams } from 'react-router-dom';
+import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
 import { useDailyPrices, usePurchases } from '../api/queries';
 import type { PurchaseHistoryItem, SecurityInfo } from '../api/types';
 import { EmptyState, ErrorAlert, Loading, ProfitText, StatCard } from '../components/common';
 import { useLayout } from '../components/Layout';
+import { DeletePurchaseDialog } from '../components/DeletePurchaseDialog';
 import { CurrencyChip } from '../components/SecuritySearch';
 import { SellDialog } from '../components/SellDialog';
 import { KRW_COLOR, USD_COLOR } from '../lib/chart';
@@ -47,6 +49,8 @@ export function SecurityDetailPage() {
   const { openRegister } = useLayout();
   const { data, isLoading, error, refetch } = usePurchases(securityId);
   const [selling, setSelling] = useState<PurchaseHistoryItem | null>(null);
+  const [deleting, setDeleting] = useState<PurchaseHistoryItem | null>(null);
+  const navigate = useNavigate();
 
   const stats = useMemo(() => {
     const items = data?.items ?? [];
@@ -115,11 +119,26 @@ export function SecurityDetailPage() {
         {data.items.length === 0 ? (
           <EmptyState title="매수 내역이 없습니다." />
         ) : (
-          <PurchaseTable security={security} items={data.items} onSell={setSelling} />
+          <PurchaseTable
+            security={security}
+            items={data.items}
+            onSell={setSelling}
+            onDelete={setDeleting}
+          />
         )}
       </Card>
 
       <SellDialog security={security} purchase={selling} onClose={() => setSelling(null)} />
+      <DeletePurchaseDialog
+        security={security}
+        purchase={deleting}
+        isLast={data.items.length === 1}
+        onClose={() => setDeleting(null)}
+        onDeleted={() => {
+          // 마지막 매수분을 지우면 보유 종목에서 빠지므로 통합잔고로 돌아간다
+          if (data.items.length === 1) navigate('/');
+        }}
+      />
     </>
   );
 }
@@ -128,10 +147,12 @@ function PurchaseTable({
   security,
   items,
   onSell,
+  onDelete,
 }: {
   security: SecurityInfo;
   items: PurchaseHistoryItem[];
   onSell: (item: PurchaseHistoryItem) => void;
+  onDelete: (item: PurchaseHistoryItem) => void;
 }) {
   const isUsd = security.currency === 'USD';
   return (
@@ -180,12 +201,22 @@ function PurchaseTable({
                   <Chip size="small" color="primary" variant="outlined" label="보유 중" />
                 )}
               </TableCell>
-              <TableCell align="right">
+              <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
                 {!item.saleDate && (
                   <Button size="small" color="error" onClick={() => onSell(item)}>
                     매도
                   </Button>
                 )}
+                <Tooltip title="매수 내역 삭제">
+                  <IconButton
+                    size="small"
+                    aria-label="매수 내역 삭제"
+                    onClick={() => onDelete(item)}
+                    sx={{ ml: 0.5 }}
+                  >
+                    <DeleteOutline fontSize="small" />
+                  </IconButton>
+                </Tooltip>
               </TableCell>
             </TableRow>
           ))}

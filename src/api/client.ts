@@ -91,7 +91,7 @@ export const reissueAccessToken = () => requestToken('/auth/reissue');
 type Query = Record<string, string | number | null | undefined>;
 
 interface RequestOptions {
-  method?: 'GET' | 'POST';
+  method?: 'GET' | 'POST' | 'DELETE';
   query?: Query;
   body?: unknown;
   signal?: AbortSignal;

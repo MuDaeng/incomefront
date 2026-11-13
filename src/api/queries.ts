@@ -7,6 +7,7 @@ import {
 import { request } from './client';
 import type {
   DailyPriceResponse,
+  DeletePurchaseRequest,
   DividendHistoryResponse,
   IntegratedBalanceResponse,
   PeriodReturnResponse,
@@ -118,6 +119,19 @@ export const useSellBalance = () => {
   return useMutation({
     mutationFn: (body: SellBalanceRequest) =>
       request('/balance/sale', { method: 'POST', body }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: BALANCE_KEY }),
+  });
+};
+
+/** 오등록한 매수분 하나 삭제. 그 종목의 매수분이 모두 지워지면 백엔드가 보유 종목에서도 제거한다 */
+export const useDeletePurchase = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ securityId, purchaseDate, sequence }: DeletePurchaseRequest) =>
+      request('/balance/purchases', {
+        method: 'DELETE',
+        query: { securityId, purchaseDate, sequence },
+      }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: BALANCE_KEY }),
   });
 };

@@ -113,6 +113,13 @@ export interface SellBalanceRequest {
   saleDate: string;
 }
 
+/** 잘못 등록한 매수분 하나 삭제 (DELETE /balance/purchases 쿼리) */
+export interface DeletePurchaseRequest {
+  securityId: string;
+  purchaseDate: string;
+  sequence: number;
+}
+
 /* ---------- 배당 ---------- */
 export interface DividendItem {
   securityId: string;
