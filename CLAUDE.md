@@ -11,7 +11,7 @@ Frontend for the **income** dividend-portfolio API (NestJS backend: https://gith
   - "커밋해줘" → create a short-lived branch off `main` (`feature/<topic>`, `fix/<topic>`, or `docs/<topic>`) and commit there. Never commit directly on `main`, even if the request says "커밋하고 main에 푸시해줘": commit on a branch first, then merge.
   - "머지하고 push하고 브랜치 삭제해줘" (or a request to push to `main`) → `git merge --ff-only <branch>` into `main`, `git push origin main`, then delete the branch locally (`git branch -d`) and on the remote if it was pushed. If `main` has moved and fast-forward fails, stop and ask instead of creating a merge commit.
   - After committing, offer the merge/push/delete step; don't run it unasked.
-  - Never commit `.env` or `claude-output.md` (both gitignored). IDE files (`.idea/`) stay out of commits.
+  - `.env.production` is committed (it holds only the public `REACT_APP_API_URL`; never put secrets in it — `REACT_APP_*` values are bundled into the client anyway). Never commit `.env.local` / `.env.*.local` or `claude-output.md` (gitignored). IDE files (`.idea/`) stay out of commits.
 - **Conversation log: `claude-output.md`** at the repo root (gitignored, never committed). The user's terminal has no scrollback, so they read the conversation in this file in WebStorm.
   - After **every** turn, append the user's message **verbatim** as a `>` quote under `## 사용자`, then the reply exactly as printed in the terminal under `## Claude`. Newest at the bottom.
   - Clarifying questions and answers go under `## Claude (질문)` / `## 사용자 (답변)`. Short replies are logged too.
@@ -21,8 +21,8 @@ Frontend for the **income** dividend-portfolio API (NestJS backend: https://gith
 
 ## Commands
 
-- `npm start` — dev server on http://localhost:3000. Backend is expected at `REACT_APP_API_URL` (default `http://localhost:8080`, set in `.env`, which is gitignored). If port 3000 is already taken (the user often has a dev server running), don't kill that process — start another instance with `PORT=3001`, keeping in mind that Google login only redirects back to the backend's `FRONTEND_URL` (normally 3000).
-- `npm run build` — production build. ESLint (`react-app` config) runs here and **fails the build** on errors (e.g. `import/first`), so run it before committing.
+- `npm start` — dev server on http://localhost:3000. Backend is expected at `REACT_APP_API_URL` (default `http://localhost:8080`, set locally in the gitignored `.env.local`; there is no `.env`). If port 3000 is already taken (the user often has a dev server running), don't kill that process — start another instance with `PORT=3001`, keeping in mind that Google login only redirects back to the backend's `FRONTEND_URL` (normally 3000).
+- `npm run build` — production build. CRA loads `.env.production` (`REACT_APP_API_URL=https://api.mudaeng.online`); Vercel runs this script as-is. Locally `.env.local` takes precedence over `.env.production`, so a local build points at `localhost:8080` unless `.env.local` is moved aside. ESLint (`react-app` config) runs here and **fails the build** on errors (e.g. `import/first`), so run it before committing.
 - `npx tsc --noEmit -p .` — type-check only (faster than a build). Covers `src/` and `test/`.
 - `CI=true npm test -- --watchAll=false` — run tests once. Single file: append its path (e.g. `test/lib/format.test.ts`); single test: append `-t "<name>"`.
   - **Test files never sit next to source.** Tests live in `test/` beside `src/`, mirroring the `src/` path: `src/lib/format.ts` → `test/lib/format.test.ts`. Import the code under test relatively through `src` (e.g. `../../src/lib/format`). The `test` script passes `--roots src test` and `package.json` `jest.testMatch` only matches `test/**`, so a `*.test.ts` placed under `src/` will **not** run. `src/setupTests.ts` stays where CRA expects it.
