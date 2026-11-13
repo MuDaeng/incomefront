@@ -42,7 +42,7 @@ interface LayoutContext {
 export const useLayout = () => useOutletContext<LayoutContext>();
 
 export function Layout() {
-  const { logout, user } = useAuth();
+  const { logout } = useAuth();
   const { mode, systemMode, setMode } = useColorScheme();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [register, setRegister] = useState<{ open: boolean; security: SecurityOption | null }>({
@@ -144,11 +144,6 @@ export function Layout() {
             <Menu />
           </IconButton>
           <Box sx={{ flex: 1 }} />
-          {user && (
-            <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>
-              회원 #{user.id}
-            </Typography>
-          )}
           <Tooltip title={resolvedMode === 'dark' ? '라이트 모드' : '다크 모드'}>
             <IconButton onClick={() => setMode(resolvedMode === 'dark' ? 'light' : 'dark')}>
               {resolvedMode === 'dark' ? <LightModeOutlined /> : <DarkModeOutlined />}

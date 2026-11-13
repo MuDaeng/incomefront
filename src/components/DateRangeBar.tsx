@@ -35,6 +35,26 @@ export const PRESETS: Record<string, RangePreset> = {
     label: '올해(오늘까지)',
     range: () => ({ from: dayjs().startOf('year').format(ISO), to: today() }),
   },
+  today: {
+    key: 'today',
+    label: '오늘',
+    range: () => ({ from: today(), to: today() }),
+  },
+  last1w: {
+    key: 'last1w',
+    label: '일주일',
+    range: () => ({ from: dayjs().subtract(1, 'week').add(1, 'day').format(ISO), to: today() }),
+  },
+  last1m: {
+    key: 'last1m',
+    label: '한달',
+    range: () => ({ from: dayjs().subtract(1, 'month').add(1, 'day').format(ISO), to: today() }),
+  },
+  last3m: {
+    key: 'last3m',
+    label: '분기',
+    range: () => ({ from: dayjs().subtract(3, 'month').add(1, 'day').format(ISO), to: today() }),
+  },
   last12m: {
     key: 'last12m',
     label: '최근 1년',

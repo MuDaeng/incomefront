@@ -45,7 +45,15 @@ import {
   toNumber,
 } from '../lib/format';
 
-const PRESET_LIST = [PRESETS.ytd, PRESETS.last12m, PRESETS.last3y];
+const PRESET_LIST = [
+  PRESETS.today,
+  PRESETS.last1w,
+  PRESETS.last1m,
+  PRESETS.last3m,
+  PRESETS.ytd,
+  PRESETS.last12m,
+  PRESETS.last3y,
+];
 
 export function ReturnsPage() {
   const [presetKey, setPresetKey] = useState<string | null>(PRESETS.ytd.key);
