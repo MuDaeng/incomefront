@@ -7,7 +7,7 @@ import {
   profitColor,
   RISE_COLOR,
   FALL_COLOR,
-} from './lib/format';
+} from '../../src/lib/format';
 
 describe('format', () => {
   it('원화는 정수, 천 단위 구분', () => {
