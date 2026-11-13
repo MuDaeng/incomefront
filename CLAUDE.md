@@ -21,7 +21,7 @@ Frontend for the **income** dividend-portfolio API (NestJS backend: https://gith
 
 ## Commands
 
-- `npm start` — dev server on http://localhost:3000. Backend is expected at `REACT_APP_API_URL` (default `http://localhost:8080`, see `.env.example`). If port 3000 is already taken (the user often has a dev server running), don't kill that process — start another instance with `PORT=3001`, keeping in mind that Google login only redirects back to the backend's `FRONTEND_URL` (normally 3000).
+- `npm start` — dev server on http://localhost:3000. Backend is expected at `REACT_APP_API_URL` (default `http://localhost:8080`, set in `.env`, which is gitignored). If port 3000 is already taken (the user often has a dev server running), don't kill that process — start another instance with `PORT=3001`, keeping in mind that Google login only redirects back to the backend's `FRONTEND_URL` (normally 3000).
 - `npm run build` — production build. ESLint (`react-app` config) runs here and **fails the build** on errors (e.g. `import/first`), so run it before committing.
 - `npx tsc --noEmit -p .` — type-check only (faster than a build). Covers `src/` and `test/`.
 - `CI=true npm test -- --watchAll=false` — run tests once. Single file: append its path (e.g. `test/lib/format.test.ts`); single test: append `-t "<name>"`.
