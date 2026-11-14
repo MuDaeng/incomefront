@@ -7,15 +7,27 @@ export const toNumber = (value: Value): number =>
 
 const EMPTY = '-';
 
-/** 원화: 정수, 천 단위 구분 */
-export const formatKrw = (value: Value): string => {
-  const n = toNumber(value);
-  return Number.isNaN(n) ? EMPTY : `${Math.trunc(n).toLocaleString('ko-KR')}원`;
+/**
+ * 소수 digits자리 아래를 버린다 (0 방향).
+ * 부동소수점 곱셈 오차(0.29 * 100 = 28.999…)로 한 단위 덜 잘리지 않도록
+ * 먼저 digits+6자리에서 반올림한 문자열을 잘라낸다.
+ */
+export const truncateDecimals = (value: number, digits: number): number => {
+  if (!Number.isFinite(value)) return value;
+  const [int, frac = ''] = Math.abs(value).toFixed(digits + 6).split('.');
+  const cut = Number(digits > 0 ? `${int}.${frac.slice(0, digits)}` : int);
+  return value < 0 && cut !== 0 ? -cut : cut;
 };
 
-/** 달러: 기본 소수 2자리 */
-export const formatUsd = (value: Value, maxDigits = 2): string => {
+/** 원화: 정수(원 미만 버림), 천 단위 구분 */
+export const formatKrw = (value: Value): string => {
   const n = toNumber(value);
+  return Number.isNaN(n) ? EMPTY : `${truncateDecimals(n, 0).toLocaleString('ko-KR')}원`;
+};
+
+/** 달러: 기본 소수 2자리, maxDigits 아래는 버림 (반올림하지 않음) */
+export const formatUsd = (value: Value, maxDigits = 2): string => {
+  const n = truncateDecimals(toNumber(value), maxDigits);
   if (Number.isNaN(n)) return EMPTY;
   const sign = n < 0 ? '-' : '';
   return `${sign}$${Math.abs(n).toLocaleString('en-US', {
@@ -28,11 +40,11 @@ export const formatUsd = (value: Value, maxDigits = 2): string => {
 export const formatPrice = (value: Value, currency: Currency): string =>
   currency === 'KRW' ? formatKrw(value) : formatUsd(value, 4);
 
-/** 입력란에 채울 단가 문자열: 원화는 정수, 달러는 소수 2자리 (천 단위 구분 없음) */
+/** 입력란에 채울 단가 문자열: 원화는 정수, 달러는 소수 2자리, 그 아래는 버림 (천 단위 구분 없음) */
 export const toPriceInput = (value: Value, currency: Currency): string => {
   const n = toNumber(value);
   if (Number.isNaN(n)) return '';
-  return currency === 'KRW' ? String(Math.round(n)) : n.toFixed(2);
+  return currency === 'KRW' ? String(truncateDecimals(n, 0)) : truncateDecimals(n, 2).toFixed(2);
 };
 
 /** 종목 통화 기준 금액 */

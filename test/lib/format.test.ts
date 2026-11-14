@@ -8,6 +8,7 @@ import {
   RISE_COLOR,
   FALL_COLOR,
   toPriceInput,
+  truncateDecimals,
 } from '../../src/lib/format';
 
 describe('format', () => {
@@ -18,7 +19,7 @@ describe('format', () => {
 
   it('달러는 소수 2자리', () => {
     expect(formatUsd('1234.5')).toBe('$1,234.50');
-    expect(formatUsd('-3.456789', 4)).toBe('-$3.4568');
+    expect(formatUsd('-3.456789', 4)).toBe('-$3.4567');
   });
 
   it('수익률은 부호와 함께', () => {
@@ -46,10 +47,27 @@ describe('format', () => {
     expect(profitColor('0')).toBeUndefined();
   });
 
-  it('입력란 단가: 원화는 정수, 달러는 소수 2자리', () => {
-    expect(toPriceInput('123.456789', 'USD')).toBe('123.46');
+  it('입력란 단가: 원화는 정수, 달러는 소수 2자리 (버림)', () => {
+    expect(toPriceInput('123.456789', 'USD')).toBe('123.45');
+    expect(toPriceInput('71000.9', 'KRW')).toBe('71000');
     expect(toPriceInput('50.000000', 'USD')).toBe('50.00');
     expect(toPriceInput('71000', 'KRW')).toBe('71000');
     expect(toPriceInput(null, 'USD')).toBe('');
+  });
+
+  it('금액은 반올림하지 않고 버린다', () => {
+    expect(formatUsd('123.456789')).toBe('$123.45');
+    expect(formatUsd('1.999')).toBe('$1.99');
+    expect(formatUsd('-1.999')).toBe('-$1.99');
+    expect(formatUsd('-0.001')).toBe('$0.00');
+    expect(formatUsd(0.29 * 100)).toBe('$29.00');
+    expect(formatKrw(71000.9)).toBe('71,000원');
+    expect(formatKrw(0.29 * 100 * 1000)).toBe('29,000원');
+  });
+
+  it('버림은 부동소수점 오차로 한 단위 덜 잘리지 않는다', () => {
+    expect(truncateDecimals(0.29 * 100, 0)).toBe(29);
+    expect(truncateDecimals(3 * 1.1, 2)).toBe(3.3);
+    expect(truncateDecimals(-1.239, 2)).toBe(-1.23);
   });
 });
