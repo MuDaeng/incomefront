@@ -27,14 +27,11 @@ import {
   toPriceInput,
 } from '../lib/format';
 import { focusFirstField, isFieldEnter } from '../lib/keyboard';
+import { staticFocusSx } from './common';
 import { useNotify } from './Notifier';
 import { SecurityOption, SecuritySearch } from './SecuritySearch';
 
 const ISO = 'YYYY-MM-DD';
-
-/** MUI 포커스 ripple과 같은 색: 글자색(currentColor) 30% */
-const FOCUS_OVERLAY =
-  'linear-gradient(color-mix(in srgb, currentColor 30%, transparent), color-mix(in srgb, currentColor 30%, transparent))';
 
 export function RegisterPurchaseDialog({
   open,
@@ -365,7 +362,7 @@ function RegisterPurchaseForm({
             onClick={submit}
             autoFocus
             disableFocusRipple
-            sx={{ '&.Mui-focusVisible': { backgroundImage: FOCUS_OVERLAY } }}
+            sx={staticFocusSx}
           >
             등록
           </Button>

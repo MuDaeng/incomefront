@@ -27,7 +27,14 @@ import { useMemo, useState } from 'react';
 import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
 import { useDailyPrices, usePurchases } from '../api/queries';
 import type { PurchaseHistoryItem, SecurityInfo } from '../api/types';
-import { EmptyState, ErrorAlert, Loading, ProfitText, StatCard } from '../components/common';
+import {
+  EmptyState,
+  ErrorAlert,
+  Loading,
+  ProfitText,
+  StatCard,
+  staticFocusSx,
+} from '../components/common';
 import { useLayout } from '../components/Layout';
 import { DeletePurchaseDialog } from '../components/DeletePurchaseDialog';
 import { CurrencyChip } from '../components/SecuritySearch';
@@ -89,7 +96,14 @@ export function SecurityDetailPage() {
             {security.symbol} · {security.id}
           </Typography>
         </Box>
-        <Button variant="contained" startIcon={<Add />} onClick={() => openRegister(security)}>
+        {/* 매수 등록 창이 닫히면 포커스가 이 버튼으로 돌아오므로 포커스 펄스 애니메이션을 끈다 */}
+        <Button
+          variant="contained"
+          startIcon={<Add />}
+          onClick={() => openRegister(security)}
+          disableFocusRipple
+          sx={staticFocusSx}
+        >
           추가 매수
         </Button>
       </Stack>

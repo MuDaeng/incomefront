@@ -11,6 +11,18 @@ import {
 import type { ReactNode } from 'react';
 import { formatRate, profitColor } from '../lib/format';
 
+const FOCUS_OVERLAY = 'color-mix(in srgb, currentColor 30%, transparent)';
+
+/**
+ * 버튼에 `disableFocusRipple`과 함께 쓴다.
+ * 키보드 포커스 때 펄스 애니메이션 대신, 같은 색(MUI 포커스 ripple: 글자색 30%)을 고정으로 덮는다.
+ */
+export const staticFocusSx = {
+  '&.Mui-focusVisible': {
+    backgroundImage: `linear-gradient(${FOCUS_OVERLAY}, ${FOCUS_OVERLAY})`,
+  },
+} as const;
+
 export function PageHeader({
   title,
   subtitle,
