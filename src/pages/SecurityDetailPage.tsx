@@ -22,7 +22,6 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import { LineChart } from '@mui/x-charts/LineChart';
 import dayjs from 'dayjs';
 import { useMemo, useState } from 'react';
 import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
@@ -33,7 +32,8 @@ import { useLayout } from '../components/Layout';
 import { DeletePurchaseDialog } from '../components/DeletePurchaseDialog';
 import { CurrencyChip } from '../components/SecuritySearch';
 import { SellDialog } from '../components/SellDialog';
-import { KRW_COLOR, USD_COLOR } from '../lib/chart';
+import { CandleChart } from '../components/CandleChart';
+import { type CandleInterval, toCandles, weekStart } from '../lib/candles';
 import {
   formatDate,
   formatExchangeRate,
@@ -234,19 +234,27 @@ const RANGES = [
   { key: 'ALL', label: '전체', months: null },
 ] as const;
 
+const INTERVALS: { key: CandleInterval; label: string }[] = [
+  { key: 'day', label: '일봉' },
+  { key: 'week', label: '주봉' },
+];
+
 function PriceChartCard({ security, average }: { security: SecurityInfo; average: number | null }) {
   const [rangeKey, setRangeKey] = useState<(typeof RANGES)[number]['key']>('6M');
+  const [interval, setCandleInterval] = useState<CandleInterval>('day');
   const months = RANGES.find((r) => r.key === rangeKey)?.months ?? null;
   // 날짜가 바뀌어도 캐시 키가 매 렌더마다 바뀌지 않도록 일 단위로 고정
-  const from = months ? dayjs().subtract(months, 'month').format('YYYY-MM-DD') : undefined;
+  const rawFrom = months ? dayjs().subtract(months, 'month').format('YYYY-MM-DD') : undefined;
+  // 주봉은 첫 주가 잘리지 않도록 그 주 월요일부터 받는다
+  const from = rawFrom && interval === 'week' ? weekStart(rawFrom) : rawFrom;
   const { data, isLoading, error } = useDailyPrices(security.id, from);
 
   const prices = data?.prices ?? [];
+  const candles = useMemo(() => toCandles(data?.prices ?? [], interval), [data, interval]);
   const first = prices[0];
   const last = prices[prices.length - 1];
   const change = first && last ? toNumber(last.closingPrice) - toNumber(first.closingPrice) : null;
   const changeRate = change !== null && first ? (change / toNumber(first.closingPrice)) * 100 : null;
-  const color = security.currency === 'KRW' ? KRW_COLOR : USD_COLOR;
 
   return (
     <Card>
@@ -271,18 +279,34 @@ function PriceChartCard({ security, average }: { security: SecurityInfo; average
           ) : undefined
         }
         action={
-          <ToggleButtonGroup
-            size="small"
-            exclusive
-            value={rangeKey}
-            onChange={(_, v) => v && setRangeKey(v)}
-          >
-            {RANGES.map((r) => (
-              <ToggleButton key={r.key} value={r.key}>
-                {r.label}
-              </ToggleButton>
-            ))}
-          </ToggleButtonGroup>
+          <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', rowGap: 1 }}>
+            <ToggleButtonGroup
+              size="small"
+              exclusive
+              value={interval}
+              onChange={(_, v) => v && setCandleInterval(v)}
+              aria-label="봉 단위"
+            >
+              {INTERVALS.map((i) => (
+                <ToggleButton key={i.key} value={i.key}>
+                  {i.label}
+                </ToggleButton>
+              ))}
+            </ToggleButtonGroup>
+            <ToggleButtonGroup
+              size="small"
+              exclusive
+              value={rangeKey}
+              onChange={(_, v) => v && setRangeKey(v)}
+              aria-label="기간"
+            >
+              {RANGES.map((r) => (
+                <ToggleButton key={r.key} value={r.key}>
+                  {r.label}
+                </ToggleButton>
+              ))}
+            </ToggleButtonGroup>
+          </Stack>
         }
         sx={{ flexWrap: 'wrap', gap: 1 }}
       />
@@ -291,57 +315,14 @@ function PriceChartCard({ security, average }: { security: SecurityInfo; average
           <Loading minHeight={280} />
         ) : error ? (
           <ErrorAlert error={error} />
-        ) : prices.length === 0 ? (
+        ) : candles.length === 0 ? (
           <EmptyState title="시세 데이터가 없습니다." />
         ) : (
-          <LineChart
-            height={300}
-            hideLegend
-            grid={{ horizontal: true }}
-            margin={{ left: 8, right: 8 }}
-            xAxis={[
-              {
-                scaleType: 'time',
-                data: prices.map((p) => new Date(p.date)),
-                valueFormatter: (d: Date) => dayjs(d).format('YY.MM.DD'),
-                tickNumber: 6,
-              },
-            ]}
-            yAxis={[
-              {
-                width: 72,
-                valueFormatter: (v: number) => formatPrice(v, security.currency),
-                domainLimit: 'nice',
-              },
-            ]}
-            series={[
-              {
-                id: 'close',
-                data: prices.map((p) => toNumber(p.closingPrice)),
-                label: '종가',
-                color,
-                area: true,
-                showMark: false,
-                valueFormatter: (v) => (v === null ? '-' : formatPrice(v, security.currency)),
-              },
-              ...(average !== null
-                ? [
-                    {
-                      id: 'avg',
-                      data: prices.map(() => average),
-                      label: '평균 매수가',
-                      color: '#9A9A9A',
-                      showMark: false,
-                      valueFormatter: (v: number | null) =>
-                        v === null ? '-' : formatPrice(v, security.currency),
-                    },
-                  ]
-                : []),
-            ]}
-            sx={{
-              '& .MuiAreaElement-root': { fillOpacity: 0.12 },
-              '& path[data-series="avg"]': { strokeDasharray: '4 4', strokeWidth: 1.5 },
-            }}
+          <CandleChart
+            candles={candles}
+            currency={security.currency}
+            interval={interval}
+            average={average}
           />
         )}
       </CardContent>

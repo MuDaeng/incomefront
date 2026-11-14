@@ -56,6 +56,7 @@ Google login is a full-page redirect to `${API_URL}/auth/google`. The backend re
 - Korean market colors: gains are red (`RISE_COLOR`), losses are blue (`FALL_COLOR`). Use `ProfitText` / `profitColor`, not MUI `success` / `error`.
 - Client-side validation mirrors the backend Zod schemas: positive decimal strings (`isPositiveDecimal`), and sale date ≥ purchase date. A purchase date with no daily price is rejected by the backend, so the register dialog checks `/daily-securities` for that date first.
 - Chart colors come from `src/lib/chart.ts` (`KRW_COLOR` for domestic, `USD_COLOR` for US).
+- The security detail price chart is a hand-drawn candlestick (`CandleChart`): MUI X Charts community has no OHLC series, so it renders on `ChartsContainer` with a band x-axis and a hidden `line` series (needed for the axis tooltip). Candles use `RISE_COLOR` / `FALL_COLOR`; daily→weekly aggregation lives in `src/lib/candles.ts`.
 
 ## Backend contract notes
 
