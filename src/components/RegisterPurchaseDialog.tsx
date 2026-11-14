@@ -193,7 +193,11 @@ function RegisterPurchaseForm({
               label="수량"
               value={amount}
               inputRef={amountRef}
-              onKeyDown={onEnter(() => priceRef.current?.focus())}
+              // 매수 단가로 넘어가면 기존 값을 전체 선택해, 처음 입력하는 글자가 기존 값을 대체하게 한다
+              onKeyDown={onEnter(() => {
+                priceRef.current?.focus();
+                priceRef.current?.select();
+              })}
               onChange={(e) => setAmount(e.target.value.trim())}
               error={amountError}
               helperText={amountError ? '0보다 큰 숫자를 입력하세요.' : ' '}
