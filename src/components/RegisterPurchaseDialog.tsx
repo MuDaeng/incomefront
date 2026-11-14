@@ -15,9 +15,17 @@ import {
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs, { Dayjs } from 'dayjs';
-import { useEffect, useState } from 'react';
+import { type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from 'react';
 import { useDailyPrices, useRegisterBalance } from '../api/queries';
-import { formatDate, formatMoney, isPositiveDecimal, toPriceInput } from '../lib/format';
+import {
+  formatDate,
+  formatMoney,
+  formatPrice,
+  formatQuantity,
+  isPositiveDecimal,
+  toPriceInput,
+} from '../lib/format';
+import { focusFirstField, isFieldEnter } from '../lib/keyboard';
 import { useNotify } from './Notifier';
 import { SecurityOption, SecuritySearch } from './SecuritySearch';
 
@@ -59,6 +67,17 @@ function RegisterPurchaseForm({
   const [priceTouched, setPriceTouched] = useState(false);
   const [sold, setSold] = useState(false);
   const [saleDate, setSaleDate] = useState<Dayjs | null>(null);
+  const [confirming, setConfirming] = useState(false);
+
+  // Enter로 종목 → 매수일 → 수량 → 매수 단가 순서로 이동
+  const dateBoxRef = useRef<HTMLDivElement>(null);
+  const amountRef = useRef<HTMLInputElement>(null);
+  const priceRef = useRef<HTMLInputElement>(null);
+  const onEnter = (action: () => void) => (e: KeyboardEvent<HTMLElement>) => {
+    if (!isFieldEnter(e)) return;
+    e.preventDefault();
+    action();
+  };
 
   const dateStr = purchaseDate?.isValid() ? purchaseDate.format(ISO) : undefined;
   const dayPrice = useDailyPrices(dateStr ? security?.id : undefined, dateStr, dateStr);
@@ -94,7 +113,13 @@ function RegisterPurchaseForm({
   const total =
     isPositiveDecimal(amount) && isPositiveDecimal(price) ? Number(amount) * Number(price) : null;
 
+  // 등록 버튼(또는 매수 단가에서 Enter) → 확인 창 → 확인 창의 등록에서 실제 등록
+  const requestSubmit = () => {
+    if (canSubmit) setConfirming(true);
+  };
+
   const submit = () => {
+    setConfirming(false);
     if (!canSubmit || !security || !dateStr) return;
     register.mutate(
       {
@@ -118,40 +143,48 @@ function RegisterPurchaseForm({
       <DialogTitle>매수 등록</DialogTitle>
       <DialogContent>
         <Stack spacing={2.5} sx={{ pt: 1 }}>
-          <SecuritySearch
-            value={security}
-            onChange={handleSecurityChange}
-            autoFocus={!initialSecurity}
-            disabled={!!initialSecurity}
-          />
+          <Box onKeyDown={onEnter(() => security && focusFirstField(dateBoxRef.current))}>
+            <SecuritySearch
+              value={security}
+              onChange={handleSecurityChange}
+              autoFocus={!initialSecurity}
+              disabled={!!initialSecurity}
+            />
+          </Box>
 
-          <DatePicker
-            label="매수일"
-            value={purchaseDate}
-            onChange={(v) => {
-              setPurchaseDate(v);
-              setDateTouched(true);
-              setPriceTouched(false);
-            }}
-            disableFuture
-            format="YYYY.MM.DD"
-            slotProps={{
-              textField: {
-                fullWidth: true,
-                error: noPriceOnDate,
-                helperText: noPriceOnDate
-                  ? '해당 매수일의 시세가 없습니다. 휴장일인지 확인해 주세요.'
-                  : closing && security
-                    ? `이날 종가 ${formatMoney(closing, security.currency)}`
-                    : ' ',
-              },
-            }}
-          />
+          <Box ref={dateBoxRef} onKeyDown={onEnter(() => amountRef.current?.focus())}>
+            <DatePicker
+              label="매수일"
+              value={purchaseDate}
+              onChange={(v) => {
+                setPurchaseDate(v);
+                setDateTouched(true);
+                setPriceTouched(false);
+              }}
+              disableFuture
+              format="YYYY.MM.DD"
+              slotProps={{
+                textField: {
+                  fullWidth: true,
+                  error: noPriceOnDate,
+                  helperText: noPriceOnDate
+                    ? '해당 매수일의 시세가 없습니다. 휴장일인지 확인해 주세요.'
+                    : closing && security
+                      ? `이날 종가 ${formatMoney(closing, security.currency)}`
+                      : ' ',
+                },
+              }}
+            />
+          </Box>
 
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <TextField
               label="수량"
               value={amount}
+              inputRef={amountRef}
+              // 추가 매수(종목 고정)로 열리면 바로 수량부터 입력
+              autoFocus={!!initialSecurity}
+              onKeyDown={onEnter(() => priceRef.current?.focus())}
               onChange={(e) => setAmount(e.target.value.trim())}
               error={amountError}
               helperText={amountError ? '0보다 큰 숫자를 입력하세요.' : ' '}
@@ -164,6 +197,8 @@ function RegisterPurchaseForm({
             <TextField
               label="매수 단가"
               value={price}
+              inputRef={priceRef}
+              onKeyDown={onEnter(requestSubmit)}
               onChange={(e) => {
                 setPrice(e.target.value.trim());
                 setPriceTouched(true);
@@ -239,10 +274,67 @@ function RegisterPurchaseForm({
         <Button onClick={onClose} color="inherit">
           취소
         </Button>
-        <Button variant="contained" onClick={submit} disabled={!canSubmit} loading={register.isPending}>
+        <Button
+          variant="contained"
+          onClick={requestSubmit}
+          disabled={!canSubmit}
+          loading={register.isPending}
+        >
           등록
         </Button>
       </DialogActions>
+
+      <Dialog
+        open={confirming}
+        onClose={() => setConfirming(false)}
+        maxWidth="xs"
+        fullWidth
+        // 닫힌 뒤 원래 포커스(등록 버튼) 대신 매수 단가로 돌아간다
+        disableRestoreFocus
+        slotProps={{ transition: { onExited: () => priceRef.current?.focus() } }}
+      >
+        <DialogTitle>매수 내역을 등록할까요?</DialogTitle>
+        <DialogContent>
+          {security && (
+            <Stack spacing={1}>
+              <ConfirmRow label="종목">{security.name}</ConfirmRow>
+              <ConfirmRow label="매수일">{dateStr ? formatDate(dateStr) : '-'}</ConfirmRow>
+              <ConfirmRow label="수량">{formatQuantity(amount)}주</ConfirmRow>
+              <ConfirmRow label="매수 단가">{formatPrice(price, security.currency)}</ConfirmRow>
+              {total !== null && (
+                <ConfirmRow label="매수 금액">
+                  <strong>{formatMoney(total, security.currency)}</strong>
+                </ConfirmRow>
+              )}
+              {sold && saleDate?.isValid() && (
+                <ConfirmRow label="매도일">{formatDate(saleDate.format(ISO))}</ConfirmRow>
+              )}
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setConfirming(false)} color="inherit">
+            취소
+          </Button>
+          {/* autoFocus: 확인 창이 뜬 상태에서 Enter 한 번 더 누르면 등록 */}
+          <Button variant="contained" onClick={submit} autoFocus>
+            등록
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
+  );
+}
+
+function ConfirmRow({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <Stack direction="row" sx={{ justifyContent: 'space-between', gap: 2 }}>
+      <Typography variant="body2" color="text.secondary">
+        {label}
+      </Typography>
+      <Typography variant="body2" sx={{ textAlign: 'right' }}>
+        {children}
+      </Typography>
+    </Stack>
   );
 }
