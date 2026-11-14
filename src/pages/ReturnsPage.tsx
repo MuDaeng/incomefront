@@ -30,6 +30,7 @@ import {
   StatCard,
 } from '../components/common';
 import { DateRange, DateRangeBar, PRESETS } from '../components/DateRangeBar';
+import { MonthlyTrendSection } from '../components/MonthlyTrendSection';
 import { CurrencyChip } from '../components/SecuritySearch';
 import { KRW_COLOR, USD_COLOR } from '../lib/chart';
 import {
@@ -86,6 +87,8 @@ export function ReturnsPage() {
       ) : data ? (
         <ReturnsContent data={data} />
       ) : null}
+      {/* 같은 기간의 월말별 추이 (기간 수익률 조회 결과와 무관하게 따로 조회) */}
+      <MonthlyTrendSection from={from} to={to} />
     </>
   );
 }

@@ -24,7 +24,6 @@ import { AuthCallbackPage } from './pages/AuthCallbackPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { DividendsPage } from './pages/DividendsPage';
 import { LoginPage } from './pages/LoginPage';
-import { MonthlyPage } from './pages/MonthlyPage';
 import { ReturnsPage } from './pages/ReturnsPage';
 import { SecurityDetailPage } from './pages/SecurityDetailPage';
 import { theme } from './theme';
@@ -86,7 +85,6 @@ export default function App() {
                       <Route path="securities/:securityId" element={<SecurityDetailPage />} />
                       <Route path="dividends" element={<DividendsPage />} />
                       <Route path="returns" element={<ReturnsPage />} />
-                      <Route path="monthly" element={<MonthlyPage />} />
                       <Route path="*" element={<NotFound />} />
                     </Route>
                   </Route>

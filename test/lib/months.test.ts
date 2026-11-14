@@ -1,24 +1,44 @@
-import { MONTH_PRESETS, monthRange, totalReturnRate } from '../../src/lib/months';
+import { MAX_MONTHS, monthsForDateRange, totalReturnRate } from '../../src/lib/months';
 
-describe('monthRange', () => {
-  it('이번 달까지 N개월, 연도 경계를 넘는다', () => {
-    expect(monthRange(6, '2026-01-15')).toEqual({ from: '2025-08', to: '2026-01' });
-    expect(monthRange(12, '2026-11-14')).toEqual({ from: '2025-12', to: '2026-11' });
+const TODAY = '2026-11-14';
+
+describe('monthsForDateRange', () => {
+  it('같은 달이면 1개월', () => {
+    expect(monthsForDateRange('2026-11-14', '2026-11-14', TODAY)).toEqual({
+      from: '2026-11',
+      to: '2026-11',
+      cappedToCurrentMonth: false,
+      cappedToMaxMonths: false,
+    });
   });
 
-  it('1개월이면 from과 to가 같다 (0 이하도 1개월로)', () => {
-    expect(monthRange(1, '2026-11-30')).toEqual({ from: '2026-11', to: '2026-11' });
-    expect(monthRange(0, '2026-11-30')).toEqual({ from: '2026-11', to: '2026-11' });
+  it('날짜를 년월로 자르고 연도 경계를 넘는다', () => {
+    expect(monthsForDateRange('2025-08-20', '2026-01-03', TODAY)).toMatchObject({
+      from: '2025-08',
+      to: '2026-01',
+    });
   });
 
-  it('월말(31일)에서도 개월 계산이 밀리지 않는다', () => {
-    expect(monthRange(3, '2026-05-31')).toEqual({ from: '2026-03', to: '2026-05' });
+  it('종료일이 미래 달이면 이번 달로 줄인다', () => {
+    expect(monthsForDateRange('2026-01-01', '2026-12-31', TODAY)).toEqual({
+      from: '2026-01',
+      to: '2026-11',
+      cappedToCurrentMonth: true,
+      cappedToMaxMonths: false,
+    });
   });
 
-  it('프리셋은 짧은 기간부터, 백엔드 최대 120개월 이내', () => {
-    const months = MONTH_PRESETS.map((p) => p.months);
-    expect([...months].sort((a, b) => a - b)).toEqual(months);
-    expect(Math.max(...months)).toBeLessThanOrEqual(120);
+  it(`${MAX_MONTHS}개월을 넘으면 최근 ${MAX_MONTHS}개월로 시작을 당긴다`, () => {
+    expect(monthsForDateRange('2010-01-01', '2026-11-14', TODAY)).toEqual({
+      from: '2016-12',
+      to: '2026-11',
+      cappedToCurrentMonth: false,
+      cappedToMaxMonths: true,
+    });
+  });
+
+  it('시작이 미래 달이면 조회할 달이 없어 null', () => {
+    expect(monthsForDateRange('2026-12-01', '2026-12-31', TODAY)).toBeNull();
   });
 });
 

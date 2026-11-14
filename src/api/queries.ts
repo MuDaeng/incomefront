@@ -81,9 +81,10 @@ export const usePeriodReturn = (from: string, to: string) =>
   });
 
 /** 월말별 원금·평가금액·누적배당금 (from/to는 'YYYY-MM', to는 이번 달까지, 최대 120개월) */
-export const useMonthlyBalance = (from: string, to: string) =>
+export const useMonthlyBalance = (from: string, to: string, enabled = true) =>
   useQuery({
     queryKey: queryKeys.monthly(from, to),
+    enabled,
     queryFn: ({ signal }) =>
       request<MonthlyBalanceResponse>('/balance/monthly', {
         query: { from, to },
