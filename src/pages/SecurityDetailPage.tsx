@@ -26,7 +26,7 @@ import {
 import dayjs from 'dayjs';
 import { useMemo, useState } from 'react';
 import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
-import { useDailyPrices, usePurchases } from '../api/queries';
+import { useDailyPrices, usePurchases, useSecurityCompanies } from '../api/queries';
 import type { PurchaseHistoryItem, SecurityInfo } from '../api/types';
 import {
   EmptyState,
@@ -45,7 +45,11 @@ import { SecurityCompanySelect } from '../components/SecurityCompanySelect';
 import { SellDialog } from '../components/SellDialog';
 import { CandleChart } from '../components/CandleChart';
 import { type CandleInterval, toCandles, weekStart } from '../lib/candles';
-import { securityCompanyLabel, securityCompanyShortLabel } from '../lib/securityCompany';
+import {
+  filterCompanyOptions,
+  securityCompanyLabel,
+  securityCompanyShortLabel,
+} from '../lib/securityCompany';
 import { useSecurityCompanyParam } from '../lib/useSecurityCompanyParam';
 import {
   formatDate,
@@ -63,6 +67,8 @@ export function SecurityDetailPage() {
   // 증권사 필터는 URL 쿼리(?securityCompany=)에 둔다 (통합잔고에서 넘어올 때도 유지)
   const [securityCompany, setSecurityCompany] = useSecurityCompanyParam();
   const { data, isLoading, error, refetch } = usePurchases(securityId, securityCompany);
+  // 필터 목록은 매수 기록이 있는 증권사만
+  const { data: companies } = useSecurityCompanies();
   const [selling, setSelling] = useState<PurchaseHistoryItem | null>(null);
   const [deleting, setDeleting] = useState<PurchaseHistoryItem | null>(null);
   const [editingRate, setEditingRate] = useState<PurchaseHistoryItem | null>(null);
@@ -151,6 +157,7 @@ export function SecurityDetailPage() {
               width={190}
               value={securityCompany ?? null}
               onChange={setSecurityCompany}
+              companies={filterCompanyOptions(companies, securityCompany)}
             />
           }
           sx={{ flexWrap: 'wrap', gap: 1 }}

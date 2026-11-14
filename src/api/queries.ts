@@ -15,6 +15,7 @@ import type {
   PeriodReturnResponse,
   PurchaseHistoryResponse,
   RegisterBalanceRequest,
+  SecurityCompanyListResponse,
   SecuritySearchItem,
   SellBalanceRequest,
   UpdateExchangeRateRequest,
@@ -38,6 +39,7 @@ export const queryKeys = {
     [...BALANCE_KEY, 'returns', from, to, securityCompany ?? null] as const,
   monthly: (from: string, to: string, securityCompany?: SecurityCompany) =>
     [...BALANCE_KEY, 'monthly', from, to, securityCompany ?? null] as const,
+  securityCompanies: [...BALANCE_KEY, 'security-companies'] as const,
   securitySearch: (keyword: string) => ['securities', keyword] as const,
   dailyPrices: (securityId: string, from?: string, to?: string) =>
     ['daily-prices', securityId, from ?? null, to ?? null] as const,
@@ -193,3 +195,12 @@ export const useUpdateSecurityCompany = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: BALANCE_KEY }),
   });
 };
+
+/** 매수 기록이 있는 증권사 목록 (필터 콤보박스용). balance 키 아래라 등록·삭제·증권사 수정 뒤 함께 갱신 */
+export const useSecurityCompanies = () =>
+  useQuery({
+    queryKey: queryKeys.securityCompanies,
+    queryFn: ({ signal }) =>
+      request<SecurityCompanyListResponse>('/balance/security-companies', { signal }),
+    select: (data) => data.securityCompanies,
+  });

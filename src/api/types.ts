@@ -121,6 +121,11 @@ export interface SellBalanceRequest {
   saleDate: string;
 }
 
+/** 매수 기록이 있는 증권사 목록 (GET /balance/security-companies). 중복 없음, 매도분 포함, enum 순서 */
+export interface SecurityCompanyListResponse {
+  securityCompanies: SecurityCompany[];
+}
+
 /** 매수분 하나의 증권사 수정 (PATCH /balance/purchases/security-company 본문) */
 export interface UpdateSecurityCompanyRequest {
   securityId: string;

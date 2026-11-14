@@ -75,3 +75,20 @@ export function saveLastSecurityCompany(value: SecurityCompany): void {
 /** 종목 상세 경로. 증권사 필터가 있으면 쿼리로 넘겨 상세에서도 같은 증권사 매수분을 보게 한다 */
 export const securityDetailPath = (securityId: string, securityCompany?: SecurityCompany): string =>
   `/securities/${encodeURIComponent(securityId)}${securityCompany ? `?securityCompany=${securityCompany}` : ''}`;
+
+/**
+ * 필터 콤보박스에 보여 줄 증권사.
+ * - available이 없으면(로딩 중·실패) 전체 목록 (필터를 못 쓰게 되지 않도록)
+ * - 있으면 그 증권사만, 전체 목록 순서(= 백엔드 enum 순서)대로
+ * - 이미 선택된 값(URL)은 목록에 없어도 넣어 둔다 (선택이 화면에서 사라지지 않도록)
+ */
+export function filterCompanyOptions(
+  available: readonly SecurityCompany[] | undefined,
+  selected?: SecurityCompany,
+): SecurityCompany[] {
+  const all = SECURITY_COMPANIES.map((c) => c.value);
+  if (!available) return all;
+  const keep = new Set<SecurityCompany>(available);
+  if (selected) keep.add(selected);
+  return all.filter((value) => keep.has(value));
+}

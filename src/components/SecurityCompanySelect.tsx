@@ -6,7 +6,6 @@ type Option = { value: SecurityCompany | null; label: string };
 
 const ALL_OPTION: Option = { value: null, label: '전체 증권사' };
 const OPTIONS: Option[] = SECURITY_COMPANIES.map((c) => ({ value: c.value, label: c.label }));
-const OPTIONS_WITH_ALL: Option[] = [ALL_OPTION, ...OPTIONS];
 
 /**
  * 증권사 선택. 이름을 쳐서 찾을 수 있다.
@@ -23,6 +22,7 @@ export function SecurityCompanySelect({
   autoFocus,
   width,
   inputRef,
+  companies,
 }: {
   value: SecurityCompany | null;
   onChange: (value: SecurityCompany | null) => void;
@@ -33,8 +33,11 @@ export function SecurityCompanySelect({
   autoFocus?: boolean;
   width?: number | string;
   inputRef?: Ref<HTMLInputElement>;
+  /** 주면 이 증권사만 옵션으로 (없으면 전체) */
+  companies?: readonly SecurityCompany[];
 }) {
-  const options = allowAll ? OPTIONS_WITH_ALL : OPTIONS;
+  const base = companies ? OPTIONS.filter((o) => o.value && companies.includes(o.value)) : OPTIONS;
+  const options = allowAll ? [ALL_OPTION, ...base] : base;
   const selected = options.find((o) => o.value === value) ?? (allowAll ? ALL_OPTION : null);
 
   return (

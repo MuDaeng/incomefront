@@ -20,7 +20,7 @@ import {
 import { PieChart } from '@mui/x-charts/PieChart';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useIntegratedBalance } from '../api/queries';
+import { useIntegratedBalance, useSecurityCompanies } from '../api/queries';
 import type { BalanceItem } from '../api/types';
 import {
   EmptyState,
@@ -50,6 +50,7 @@ import {
   type SecurityCompany,
   securityCompanyLabel,
   securityDetailPath,
+  filterCompanyOptions,
 } from '../lib/securityCompany';
 import { useSecurityCompanyParam } from '../lib/useSecurityCompanyParam';
 
@@ -60,6 +61,8 @@ export function DashboardPage() {
   // 증권사 필터는 URL 쿼리(?securityCompany=)에 둔다: 새로고침·뒤로 가기에도 유지
   const [securityCompany, setSecurityCompany] = useSecurityCompanyParam();
   const { data, isLoading, error, refetch } = useIntegratedBalance(securityCompany);
+  // 필터 목록은 매수 기록이 있는 증권사만
+  const { data: companies } = useSecurityCompanies();
   const [filter, setFilter] = useState<Filter>('ALL');
 
   const items = useMemo(
@@ -83,6 +86,7 @@ export function DashboardPage() {
         width={190}
         value={securityCompany ?? null}
         onChange={setSecurityCompany}
+        companies={filterCompanyOptions(companies, securityCompany)}
       />
       {registerButton}
     </Stack>

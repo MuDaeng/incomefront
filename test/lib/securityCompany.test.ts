@@ -1,4 +1,5 @@
 import {
+  filterCompanyOptions,
   loadLastSecurityCompany,
   parseSecurityCompany,
   saveLastSecurityCompany,
@@ -58,5 +59,25 @@ describe('securityCompany', () => {
       '/securities/KR7005930003?securityCompany=KIWOOM',
     );
     expect(securityDetailPath('A B/C')).toBe('/securities/A%20B%2FC');
+  });
+
+  describe('filterCompanyOptions', () => {
+    it('목록을 아직 못 받았으면 전체 증권사', () => {
+      expect(filterCompanyOptions(undefined)).toHaveLength(SECURITY_COMPANIES.length);
+    });
+
+    it('받은 증권사만, 백엔드 enum 순서로', () => {
+      expect(filterCompanyOptions(['TOSS', 'MIRAE_ASSET', 'KIWOOM'])).toEqual([
+        'MIRAE_ASSET',
+        'KIWOOM',
+        'TOSS',
+      ]);
+    });
+
+    it('선택된 증권사는 목록에 없어도 넣어 둔다', () => {
+      expect(filterCompanyOptions(['TOSS'], 'SAMSUNG')).toEqual(['SAMSUNG', 'TOSS']);
+      expect(filterCompanyOptions([], 'KB')).toEqual(['KB']);
+      expect(filterCompanyOptions([])).toEqual([]);
+    });
   });
 });
