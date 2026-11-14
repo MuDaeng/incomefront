@@ -9,6 +9,7 @@ import {
   useState,
 } from 'react';
 import {
+  ApiError,
   issueAccessToken,
   setAccessToken,
   setUnauthorizedHandler,
@@ -24,6 +25,8 @@ interface AuthContextValue {
   /** /auth/callback 에서 호출: cookie의 refresh token으로 access token 발급 */
   completeLogin: () => Promise<void>;
   logout: () => void;
+  /** 자동 로그인이 요청 속도 제한(429)으로 실패했을 때의 안내 문구. 로그인 화면에 표시 */
+  autoLoginError: string | null;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -57,6 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const [status, setStatus] = useState<AuthStatus>('loading');
   const [user, setUser] = useState<User | null>(null);
+  const [autoLoginError, setAutoLoginError] = useState<string | null>(null);
 
   const signOutLocally = useCallback(() => {
     setAccessToken(null);
@@ -84,8 +88,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(me);
         setStatus('authenticated');
       })
-      .catch(() => {
-        if (!cancelled) signOutLocally();
+      .catch((error) => {
+        if (cancelled) return;
+        // 429는 쿠키가 살아 있어도 실패하므로, 로그인 화면에서 잠시 후 다시 시도하라고 안내
+        if (error instanceof ApiError && error.status === 429) setAutoLoginError(error.message);
+        signOutLocally();
       });
     return () => {
       cancelled = true;
@@ -96,6 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     storage.setLoggedOut(false);
     await issueAccessToken();
     const me = await fetchMe();
+    setAutoLoginError(null);
     setUser(me);
     setStatus('authenticated');
   }, []);
@@ -107,8 +115,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [queryClient, signOutLocally]);
 
   const value = useMemo(
-    () => ({ status, user, completeLogin, logout }),
-    [status, user, completeLogin, logout],
+    () => ({ status, user, completeLogin, logout, autoLoginError }),
+    [status, user, completeLogin, logout, autoLoginError],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,4 +1,4 @@
-import { Box, Button, Card, CardContent, Stack, Typography } from '@mui/material';
+import { Alert, Box, Button, Card, CardContent, Stack, Typography } from '@mui/material';
 import { Navigate } from 'react-router-dom';
 import { GOOGLE_LOGIN_URL } from '../api/client';
 import { useAuth } from '../auth/AuthProvider';
@@ -22,7 +22,7 @@ const FEATURES = [
 ];
 
 export function LoginPage() {
-  const { status } = useAuth();
+  const { status, autoLoginError } = useAuth();
   if (status === 'loading') return <Loading minHeight={400} />;
   if (status === 'authenticated') return <Navigate to="/" replace />;
 
@@ -72,6 +72,11 @@ export function LoginPage() {
               </Stack>
             ))}
           </Stack>
+          {autoLoginError && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              {autoLoginError}
+            </Alert>
+          )}
           <Button
             fullWidth
             size="large"

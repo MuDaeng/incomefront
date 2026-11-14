@@ -1,3 +1,5 @@
+import { apiErrorMessage } from '../lib/apiError';
+
 export const API_URL = (
   process.env.REACT_APP_API_URL ?? 'http://localhost:8080'
 ).replace(/\/$/, '');
@@ -29,7 +31,7 @@ export const setUnauthorizedHandler = (handler: (() => void) | null) => {
   unauthorizedHandler = handler;
 };
 
-/** Nest 에러 응답({ message: string | string[] | issue[] })에서 사용자 메시지 추출 */
+/** 에러 응답을 ApiError로 (메시지 규칙은 src/lib/apiError.ts) */
 const toApiError = async (res: Response): Promise<ApiError> => {
   let body: unknown;
   try {
@@ -37,25 +39,7 @@ const toApiError = async (res: Response): Promise<ApiError> => {
   } catch {
     body = undefined;
   }
-  let message = `요청에 실패했습니다. (${res.status})`;
-  if (body && typeof body === 'object' && 'message' in body) {
-    const raw = (body as { message: unknown }).message;
-    if (typeof raw === 'string') {
-      message = raw;
-    } else if (Array.isArray(raw)) {
-      const parts = raw
-        .map((m) =>
-          typeof m === 'string'
-            ? m
-            : m && typeof m === 'object' && 'message' in m
-              ? String((m as { message: unknown }).message)
-              : '',
-        )
-        .filter(Boolean);
-      if (parts.length) message = parts.join('\n');
-    }
-  }
-  return new ApiError(res.status, message, body);
+  return new ApiError(res.status, apiErrorMessage(res.status, body), body);
 };
 
 /**
@@ -127,7 +111,9 @@ export async function request<T>(
   if (res.status === 401) {
     try {
       await reissueAccessToken();
-    } catch {
+    } catch (error) {
+      // 속도 제한(429)은 토큰 문제가 아니므로 로그아웃하지 않고 그대로 알린다
+      if (error instanceof ApiError && error.status === 429) throw error;
       setAccessToken(null);
       unauthorizedHandler?.();
       throw new ApiError(401, '로그인이 만료되었습니다. 다시 로그인해 주세요.');

@@ -27,6 +27,7 @@ import {
   toPriceInput,
 } from '../lib/format';
 import { focusFirstField, isFieldEnter } from '../lib/keyboard';
+import { useDebounced } from '../lib/useDebounced';
 import { staticFocusSx } from './common';
 import { useNotify } from './Notifier';
 import { SecurityOption, SecuritySearch } from './SecuritySearch';
@@ -84,9 +85,14 @@ function RegisterPurchaseForm({
   };
 
   const dateStr = purchaseDate?.isValid() ? purchaseDate.format(ISO) : undefined;
-  const dayPrice = useDailyPrices(dateStr ? security?.id : undefined, dateStr, dateStr);
-  const closing = dayPrice.data?.prices[0]?.closingPrice;
-  const noPriceOnDate = !!dateStr && !!security && dayPrice.isSuccess && !closing;
+  // 매수일을 타이핑하는 동안 칸마다 시세를 조회하지 않도록 늦춘다 (GET /daily-securities는 IP당 분당 30회)
+  const lookupDate = useDebounced(dateStr, 300);
+  const dateSettled = lookupDate === dateStr;
+  const dayPrice = useDailyPrices(lookupDate ? security?.id : undefined, lookupDate, lookupDate);
+  // 입력 도중의 날짜 결과로 경고·종가 자동 입력이 바뀌지 않게, 조회 날짜가 입력과 같을 때만 쓴다
+  const closing = dateSettled ? dayPrice.data?.prices[0]?.closingPrice : undefined;
+  const noPriceOnDate =
+    dateSettled && !!dateStr && !!security && dayPrice.isSuccess && !closing;
 
   // 종목 선택 시 최근 거래일로 매수일 기본값 설정
   const handleSecurityChange = (next: SecurityOption | null) => {
@@ -111,6 +117,7 @@ function RegisterPurchaseForm({
   const canSubmit =
     !!security &&
     !!dateStr &&
+    dateSettled &&
     isPositiveDecimal(amount) &&
     isPositiveDecimal(price) &&
     !noPriceOnDate &&
