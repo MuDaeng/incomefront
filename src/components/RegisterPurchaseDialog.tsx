@@ -78,6 +78,7 @@ function RegisterPurchaseForm({
   const amountRef = useRef<HTMLInputElement>(null);
   const priceRef = useRef<HTMLInputElement>(null);
   const exchangeRateRef = useRef<HTMLInputElement>(null);
+  const saleDateBoxRef = useRef<HTMLDivElement>(null);
   const onEnter = (action: () => void) => (e: KeyboardEvent<HTMLElement>) => {
     if (!isFieldEnter(e)) return;
     e.preventDefault();
@@ -131,6 +132,18 @@ function RegisterPurchaseForm({
   // 등록 버튼(또는 마지막 칸에서 Enter) → 확인 창 → 확인 창의 등록에서 실제 등록
   const requestSubmit = () => {
     if (canSubmit) setConfirming(true);
+  };
+
+  // 금액 칸(매수 단가, USD는 구매 환율) 다음: 매도 내역이면 매도일로, 아니면 확인 창
+  const goAfterAmounts = () => {
+    if (sold) focusFirstField(saleDateBoxRef.current);
+    else requestSubmit();
+  };
+
+  // 확인 창을 취소하면 마지막 입력칸으로 돌아간다 (매도일 → 구매 환율 → 매수 단가)
+  const focusLastField = () => {
+    if (sold) focusFirstField(saleDateBoxRef.current);
+    else (isUsd ? exchangeRateRef.current : priceRef.current)?.focus();
   };
 
   const submit = () => {
@@ -218,7 +231,7 @@ function RegisterPurchaseForm({
               label="매수 단가"
               value={price}
               inputRef={priceRef}
-              onKeyDown={onEnter(() => (isUsd ? exchangeRateRef.current?.focus() : requestSubmit()))}
+              onKeyDown={onEnter(() => (isUsd ? exchangeRateRef.current?.focus() : goAfterAmounts()))}
               onChange={(e) => {
                 setPrice(e.target.value.trim());
                 setPriceTouched(true);
@@ -244,7 +257,7 @@ function RegisterPurchaseForm({
               label="구매 환율 (선택)"
               value={exchangeRate}
               inputRef={exchangeRateRef}
-              onKeyDown={onEnter(requestSubmit)}
+              onKeyDown={onEnter(goAfterAmounts)}
               onChange={(e) => setExchangeRate(e.target.value.trim())}
               error={exchangeRateError}
               helperText={
@@ -266,22 +279,27 @@ function RegisterPurchaseForm({
               label="이미 매도한 내역이에요"
             />
             {sold && (
-              <DatePicker
-                label="매도일"
-                value={saleDate}
-                onChange={setSaleDate}
-                disableFuture
-                minDate={purchaseDate ?? undefined}
-                format="YYYY.MM.DD"
-                slotProps={{
-                  textField: {
-                    fullWidth: true,
-                    sx: { mt: 1.5 },
-                    error: saleBeforePurchase,
-                    helperText: saleBeforePurchase ? '매도일은 매수일과 같거나 이후여야 합니다.' : ' ',
-                  },
-                }}
-              />
+              // 매도 내역이면 매도일이 마지막 칸: Enter → 확인 창
+              <Box ref={saleDateBoxRef} onKeyDown={onEnter(requestSubmit)}>
+                <DatePicker
+                  label="매도일"
+                  value={saleDate}
+                  onChange={setSaleDate}
+                  // 스위치를 켜면 바로 매도일부터 입력
+                  autoFocus
+                  disableFuture
+                  minDate={purchaseDate ?? undefined}
+                  format="YYYY.MM.DD"
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      sx: { mt: 1.5 },
+                      error: saleBeforePurchase,
+                      helperText: saleBeforePurchase ? '매도일은 매수일과 같거나 이후여야 합니다.' : ' ',
+                    },
+                  }}
+                />
+              </Box>
             )}
           </Box>
 
@@ -330,13 +348,9 @@ function RegisterPurchaseForm({
         onClose={() => setConfirming(false)}
         maxWidth="xs"
         fullWidth
-        // 닫힌 뒤 원래 포커스(등록 버튼) 대신 마지막 입력칸(매수 단가, USD는 구매 환율)으로 돌아간다
+        // 닫힌 뒤 원래 포커스(등록 버튼) 대신 마지막 입력칸으로 돌아간다
         disableRestoreFocus
-        slotProps={{
-          transition: {
-            onExited: () => (isUsd ? exchangeRateRef.current : priceRef.current)?.focus(),
-          },
-        }}
+        slotProps={{ transition: { onExited: focusLastField } }}
       >
         <DialogTitle>매수 내역을 등록할까요?</DialogTitle>
         <DialogContent>
