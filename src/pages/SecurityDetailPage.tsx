@@ -186,7 +186,14 @@ function PurchaseTable({
               {isUsd && (
                 <TableCell align="right">
                   {item.exchangeRate ? (
-                    <Tooltip title={`${formatDate(item.exchangeRateDate)} 기준`}>
+                    <Tooltip
+                      title={
+                        // exchangeRateDate가 null이면 매수 시 저장한 환율, 있으면 그날 종가 환율로 대체한 값
+                        item.exchangeRateDate
+                          ? `${formatDate(item.exchangeRateDate)} 종가 환율 (저장된 구매 환율 없음)`
+                          : '매수 시 저장한 구매 환율'
+                      }
+                    >
                       <span>{formatExchangeRate(item.exchangeRate)}</span>
                     </Tooltip>
                   ) : (

@@ -103,6 +103,8 @@ export interface RegisterBalanceRequest {
   amount: string;
   price: string;
   saleDate?: string | null;
+  /** 구매 환율(1 USD당 원화). KRW 종목은 무시, USD에서 생략하면 매수일(이전 최근) USD 종가 환율 */
+  exchangeRate?: string | null;
 }
 
 export interface SellBalanceRequest {

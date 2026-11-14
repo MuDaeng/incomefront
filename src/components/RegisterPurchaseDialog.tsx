@@ -19,6 +19,7 @@ import { type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from 
 import { useDailyPrices, useRegisterBalance } from '../api/queries';
 import {
   formatDate,
+  formatExchangeRate,
   formatMoney,
   formatPrice,
   formatQuantity,
@@ -71,12 +72,14 @@ function RegisterPurchaseForm({
   const [priceTouched, setPriceTouched] = useState(false);
   const [sold, setSold] = useState(false);
   const [saleDate, setSaleDate] = useState<Dayjs | null>(null);
+  const [exchangeRate, setExchangeRate] = useState('');
   const [confirming, setConfirming] = useState(false);
 
-  // Enter로 종목 → 매수일 → 수량 → 매수 단가 순서로 이동
+  // Enter로 종목 → 매수일 → 수량 → 매수 단가 (→ USD는 구매 환율) 순서로 이동
   const dateBoxRef = useRef<HTMLDivElement>(null);
   const amountRef = useRef<HTMLInputElement>(null);
   const priceRef = useRef<HTMLInputElement>(null);
+  const exchangeRateRef = useRef<HTMLInputElement>(null);
   const onEnter = (action: () => void) => (e: KeyboardEvent<HTMLElement>) => {
     if (!isFieldEnter(e)) return;
     e.preventDefault();
@@ -102,6 +105,9 @@ function RegisterPurchaseForm({
 
   const amountError = amount !== '' && !isPositiveDecimal(amount);
   const priceError = price !== '' && !isPositiveDecimal(price);
+  // 구매 환율은 USD 종목만, 선택 입력 (비우면 백엔드가 매수일 환율로 저장)
+  const isUsd = currency === 'USD';
+  const exchangeRateError = isUsd && exchangeRate !== '' && !isPositiveDecimal(exchangeRate);
   const saleBeforePurchase =
     sold && !!saleDate && !!purchaseDate && saleDate.isBefore(purchaseDate, 'day');
 
@@ -111,13 +117,14 @@ function RegisterPurchaseForm({
     isPositiveDecimal(amount) &&
     isPositiveDecimal(price) &&
     !noPriceOnDate &&
+    !exchangeRateError &&
     (!sold || (!!saleDate?.isValid() && !saleBeforePurchase)) &&
     !register.isPending;
 
   const total =
     isPositiveDecimal(amount) && isPositiveDecimal(price) ? Number(amount) * Number(price) : null;
 
-  // 등록 버튼(또는 매수 단가에서 Enter) → 확인 창 → 확인 창의 등록에서 실제 등록
+  // 등록 버튼(또는 마지막 칸에서 Enter) → 확인 창 → 확인 창의 등록에서 실제 등록
   const requestSubmit = () => {
     if (canSubmit) setConfirming(true);
   };
@@ -132,6 +139,7 @@ function RegisterPurchaseForm({
         amount,
         price,
         saleDate: sold && saleDate ? saleDate.format(ISO) : null,
+        exchangeRate: isUsd && exchangeRate ? exchangeRate : null,
       },
       {
         onSuccess: () => {
@@ -202,7 +210,7 @@ function RegisterPurchaseForm({
               label="매수 단가"
               value={price}
               inputRef={priceRef}
-              onKeyDown={onEnter(requestSubmit)}
+              onKeyDown={onEnter(() => (isUsd ? exchangeRateRef.current?.focus() : requestSubmit()))}
               onChange={(e) => {
                 setPrice(e.target.value.trim());
                 setPriceTouched(true);
@@ -222,6 +230,27 @@ function RegisterPurchaseForm({
               }}
             />
           </Stack>
+
+          {isUsd && (
+            <TextField
+              label="구매 환율 (선택)"
+              value={exchangeRate}
+              inputRef={exchangeRateRef}
+              onKeyDown={onEnter(requestSubmit)}
+              onChange={(e) => setExchangeRate(e.target.value.trim())}
+              error={exchangeRateError}
+              helperText={
+                exchangeRateError
+                  ? '0보다 큰 숫자를 입력하세요.'
+                  : '실제로 환전한 환율(1달러당 원화). 비워 두면 매수일 환율로 저장합니다.'
+              }
+              fullWidth
+              slotProps={{
+                htmlInput: { inputMode: 'decimal' },
+                input: { endAdornment: <InputAdornment position="end">원</InputAdornment> },
+              }}
+            />
+          )}
 
           <Box>
             <FormControlLabel
@@ -293,9 +322,13 @@ function RegisterPurchaseForm({
         onClose={() => setConfirming(false)}
         maxWidth="xs"
         fullWidth
-        // 닫힌 뒤 원래 포커스(등록 버튼) 대신 매수 단가로 돌아간다
+        // 닫힌 뒤 원래 포커스(등록 버튼) 대신 마지막 입력칸(매수 단가, USD는 구매 환율)으로 돌아간다
         disableRestoreFocus
-        slotProps={{ transition: { onExited: () => priceRef.current?.focus() } }}
+        slotProps={{
+          transition: {
+            onExited: () => (isUsd ? exchangeRateRef.current : priceRef.current)?.focus(),
+          },
+        }}
       >
         <DialogTitle>매수 내역을 등록할까요?</DialogTitle>
         <DialogContent>
@@ -308,6 +341,11 @@ function RegisterPurchaseForm({
               {total !== null && (
                 <ConfirmRow label="매수 금액">
                   <strong>{formatMoney(total, security.currency)}</strong>
+                </ConfirmRow>
+              )}
+              {isUsd && (
+                <ConfirmRow label="구매 환율">
+                  {exchangeRate ? formatExchangeRate(exchangeRate) : '매수일 환율 적용'}
                 </ConfirmRow>
               )}
               {sold && saleDate?.isValid() && (
