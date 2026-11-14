@@ -31,6 +31,10 @@ import { SecurityOption, SecuritySearch } from './SecuritySearch';
 
 const ISO = 'YYYY-MM-DD';
 
+/** MUI 포커스 ripple과 같은 색: 글자색(currentColor) 30% */
+const FOCUS_OVERLAY =
+  'linear-gradient(color-mix(in srgb, currentColor 30%, transparent), color-mix(in srgb, currentColor 30%, transparent))';
+
 export function RegisterPurchaseDialog({
   open,
   onClose,
@@ -316,8 +320,15 @@ function RegisterPurchaseForm({
           <Button onClick={() => setConfirming(false)} color="inherit">
             취소
           </Button>
-          {/* autoFocus: 확인 창이 뜬 상태에서 Enter 한 번 더 누르면 등록 */}
-          <Button variant="contained" onClick={submit} autoFocus>
+          {/* autoFocus: 확인 창이 뜬 상태에서 Enter 한 번 더 누르면 등록.
+              포커스 펄스 애니메이션 대신 같은 색(글자색 30%)을 고정으로 덮는다 */}
+          <Button
+            variant="contained"
+            onClick={submit}
+            autoFocus
+            disableFocusRipple
+            sx={{ '&.Mui-focusVisible': { backgroundImage: FOCUS_OVERLAY } }}
+          >
             등록
           </Button>
         </DialogActions>
