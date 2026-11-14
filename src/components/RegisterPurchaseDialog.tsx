@@ -165,6 +165,8 @@ function RegisterPurchaseForm({
             <DatePicker
               label="매수일"
               value={purchaseDate}
+              // 추가 매수(종목 고정)로 열리면 매수일부터 입력
+              autoFocus={!!initialSecurity}
               onChange={(v) => {
                 setPurchaseDate(v);
                 setDateTouched(true);
@@ -191,8 +193,6 @@ function RegisterPurchaseForm({
               label="수량"
               value={amount}
               inputRef={amountRef}
-              // 추가 매수(종목 고정)로 열리면 바로 수량부터 입력
-              autoFocus={!!initialSecurity}
               onKeyDown={onEnter(() => priceRef.current?.focus())}
               onChange={(e) => setAmount(e.target.value.trim())}
               error={amountError}
