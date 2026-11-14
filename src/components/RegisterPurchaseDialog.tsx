@@ -27,9 +27,16 @@ import {
   toPriceInput,
 } from '../lib/format';
 import { focusFirstField, isFieldEnter } from '../lib/keyboard';
+import {
+  loadLastSecurityCompany,
+  saveLastSecurityCompany,
+  type SecurityCompany,
+  securityCompanyLabel,
+} from '../lib/securityCompany';
 import { useDebounced } from '../lib/useDebounced';
 import { staticFocusSx } from './common';
 import { useNotify } from './Notifier';
+import { SecurityCompanySelect } from './SecurityCompanySelect';
 import { SecurityOption, SecuritySearch } from './SecuritySearch';
 
 const ISO = 'YYYY-MM-DD';
@@ -38,14 +45,21 @@ export function RegisterPurchaseDialog({
   open,
   onClose,
   initialSecurity,
+  initialSecurityCompany,
 }: {
   open: boolean;
   onClose: () => void;
   initialSecurity?: SecurityOption | null;
+  /** 증권사 처음 값 (없으면 마지막으로 등록한 증권사) */
+  initialSecurityCompany?: SecurityCompany;
 }) {
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <RegisterPurchaseForm onClose={onClose} initialSecurity={initialSecurity ?? null} />
+      <RegisterPurchaseForm
+        onClose={onClose}
+        initialSecurity={initialSecurity ?? null}
+        initialSecurityCompany={initialSecurityCompany}
+      />
     </Dialog>
   );
 }
@@ -53,14 +67,21 @@ export function RegisterPurchaseDialog({
 function RegisterPurchaseForm({
   onClose,
   initialSecurity,
+  initialSecurityCompany,
 }: {
   onClose: () => void;
   initialSecurity: SecurityOption | null;
+  initialSecurityCompany?: SecurityCompany;
 }) {
   const notify = useNotify();
   const register = useRegisterBalance();
 
   const [security, setSecurity] = useState<SecurityOption | null>(initialSecurity);
+  const [securityCompany, setSecurityCompany] = useState<SecurityCompany | null>(
+    () => initialSecurityCompany ?? loadLastSecurityCompany(),
+  );
+  // 추가 매수에서 증권사가 비어 있으면 증권사부터, 있으면 매수일부터 입력
+  const [focusCompanyFirst] = useState(() => !!initialSecurity && !securityCompany);
   const [purchaseDate, setPurchaseDate] = useState<Dayjs | null>(
     initialSecurity?.priceDate ? dayjs(initialSecurity.priceDate) : dayjs(),
   );
@@ -74,6 +95,7 @@ function RegisterPurchaseForm({
   const [confirming, setConfirming] = useState(false);
 
   // Enter로 종목 → 매수일 → 수량 → 매수 단가 (→ USD는 구매 환율) 순서로 이동
+  const securityCompanyRef = useRef<HTMLInputElement>(null);
   const dateBoxRef = useRef<HTMLDivElement>(null);
   const amountRef = useRef<HTMLInputElement>(null);
   const priceRef = useRef<HTMLInputElement>(null);
@@ -117,6 +139,7 @@ function RegisterPurchaseForm({
 
   const canSubmit =
     !!security &&
+    !!securityCompany &&
     !!dateStr &&
     dateSettled &&
     isPositiveDecimal(amount) &&
@@ -148,10 +171,11 @@ function RegisterPurchaseForm({
 
   const submit = () => {
     setConfirming(false);
-    if (!canSubmit || !security || !dateStr) return;
+    if (!canSubmit || !security || !securityCompany || !dateStr) return;
     register.mutate(
       {
         securityId: security.id,
+        securityCompany,
         purchaseDate: dateStr,
         amount,
         price,
@@ -160,6 +184,7 @@ function RegisterPurchaseForm({
       },
       {
         onSuccess: () => {
+          saveLastSecurityCompany(securityCompany);
           notify(`${security.name} 매수 내역을 등록했습니다.`);
           onClose();
         },
@@ -172,7 +197,7 @@ function RegisterPurchaseForm({
       <DialogTitle>매수 등록</DialogTitle>
       <DialogContent>
         <Stack spacing={2.5} sx={{ pt: 1 }}>
-          <Box onKeyDown={onEnter(() => security && focusFirstField(dateBoxRef.current))}>
+          <Box onKeyDown={onEnter(() => security && securityCompanyRef.current?.focus())}>
             <SecuritySearch
               value={security}
               onChange={handleSecurityChange}
@@ -181,12 +206,22 @@ function RegisterPurchaseForm({
             />
           </Box>
 
+          <Box onKeyDown={onEnter(() => securityCompany && focusFirstField(dateBoxRef.current))}>
+            <SecurityCompanySelect
+              value={securityCompany}
+              onChange={setSecurityCompany}
+              required
+              autoFocus={focusCompanyFirst}
+              inputRef={securityCompanyRef}
+            />
+          </Box>
+
           <Box ref={dateBoxRef} onKeyDown={onEnter(() => amountRef.current?.focus())}>
             <DatePicker
               label="매수일"
               value={purchaseDate}
-              // 추가 매수(종목 고정)로 열리면 매수일부터 입력
-              autoFocus={!!initialSecurity}
+              // 추가 매수(종목 고정)로 열리면 매수일부터 입력 (증권사가 비어 있으면 증권사부터)
+              autoFocus={!!initialSecurity && !focusCompanyFirst}
               onChange={(v) => {
                 setPurchaseDate(v);
                 setDateTouched(true);
@@ -357,6 +392,9 @@ function RegisterPurchaseForm({
           {security && (
             <Stack spacing={1}>
               <ConfirmRow label="종목">{security.name}</ConfirmRow>
+              <ConfirmRow label="증권사">
+                {securityCompany ? securityCompanyLabel(securityCompany) : '-'}
+              </ConfirmRow>
               <ConfirmRow label="매수일">{dateStr ? formatDate(dateStr) : '-'}</ConfirmRow>
               <ConfirmRow label="수량">{formatQuantity(amount)}주</ConfirmRow>
               <ConfirmRow label="매수 단가">{formatPrice(price, security.currency)}</ConfirmRow>

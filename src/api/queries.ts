@@ -4,6 +4,7 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
+import type { SecurityCompany } from '../lib/securityCompany';
 import { request } from './client';
 import type {
   DailyPriceResponse,
@@ -26,9 +27,10 @@ export const fetchMe = () => request<User>('/auth/me');
 const BALANCE_KEY = ['balance'] as const;
 
 export const queryKeys = {
-  integratedBalance: [...BALANCE_KEY, 'integrated'] as const,
-  purchases: (securityId: string) =>
-    [...BALANCE_KEY, 'purchases', securityId] as const,
+  integratedBalance: (securityCompany?: SecurityCompany) =>
+    [...BALANCE_KEY, 'integrated', securityCompany ?? null] as const,
+  purchases: (securityId: string, securityCompany?: SecurityCompany) =>
+    [...BALANCE_KEY, 'purchases', securityId, securityCompany ?? null] as const,
   dividends: (from?: string, to?: string) =>
     [...BALANCE_KEY, 'dividends', from ?? null, to ?? null] as const,
   returns: (from: string, to: string) =>
@@ -40,22 +42,30 @@ export const queryKeys = {
     ['daily-prices', securityId, from ?? null, to ?? null] as const,
 };
 
-export const useIntegratedBalance = () =>
+/** 통합잔고. securityCompany를 주면 그 증권사 매수분만, 없으면 전체 */
+export const useIntegratedBalance = (securityCompany?: SecurityCompany) =>
   useQuery({
-    queryKey: queryKeys.integratedBalance,
+    queryKey: queryKeys.integratedBalance(securityCompany),
     queryFn: ({ signal }) =>
-      request<IntegratedBalanceResponse>('/balance', { signal }),
+      request<IntegratedBalanceResponse>('/balance', {
+        query: { securityCompany },
+        signal,
+      }),
+    // 필터를 바꿀 때 화면 전체가 로딩으로 바뀌지 않도록 이전 결과를 유지
+    placeholderData: keepPreviousData,
   });
 
-export const usePurchases = (securityId: string) =>
+/** 종목 매수 내역. securityCompany를 주면 그 증권사 매수분만, 없으면 전체 */
+export const usePurchases = (securityId: string, securityCompany?: SecurityCompany) =>
   useQuery({
-    queryKey: queryKeys.purchases(securityId),
+    queryKey: queryKeys.purchases(securityId, securityCompany),
     queryFn: ({ signal }) =>
       request<PurchaseHistoryResponse>('/balance/purchases', {
-        query: { securityId },
+        query: { securityId, securityCompany },
         signal,
       }),
     enabled: !!securityId,
+    placeholderData: keepPreviousData,
   });
 
 export const useDividendHistory = (from?: string, to?: string) =>

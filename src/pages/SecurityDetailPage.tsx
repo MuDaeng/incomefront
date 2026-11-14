@@ -25,7 +25,7 @@ import {
 } from '@mui/material';
 import dayjs from 'dayjs';
 import { useMemo, useState } from 'react';
-import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
+import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useDailyPrices, usePurchases } from '../api/queries';
 import type { PurchaseHistoryItem, SecurityInfo } from '../api/types';
 import {
@@ -40,9 +40,15 @@ import { useLayout } from '../components/Layout';
 import { DeletePurchaseDialog } from '../components/DeletePurchaseDialog';
 import { EditExchangeRateDialog } from '../components/EditExchangeRateDialog';
 import { CurrencyChip } from '../components/SecuritySearch';
+import { SecurityCompanySelect } from '../components/SecurityCompanySelect';
 import { SellDialog } from '../components/SellDialog';
 import { CandleChart } from '../components/CandleChart';
 import { type CandleInterval, toCandles, weekStart } from '../lib/candles';
+import {
+  parseSecurityCompany,
+  type SecurityCompany,
+  securityCompanyLabel,
+} from '../lib/securityCompany';
 import {
   formatDate,
   formatExchangeRate,
@@ -56,7 +62,12 @@ import {
 export function SecurityDetailPage() {
   const { securityId = '' } = useParams();
   const { openRegister } = useLayout();
-  const { data, isLoading, error, refetch } = usePurchases(securityId);
+  // 증권사 필터는 URL 쿼리(?securityCompany=)에 둔다 (통합잔고에서 넘어올 때도 유지)
+  const [searchParams, setSearchParams] = useSearchParams();
+  const securityCompany = parseSecurityCompany(searchParams.get('securityCompany'));
+  const setSecurityCompany = (value: SecurityCompany | null) =>
+    setSearchParams(value ? { securityCompany: value } : {}, { replace: true });
+  const { data, isLoading, error, refetch } = usePurchases(securityId, securityCompany);
   const [selling, setSelling] = useState<PurchaseHistoryItem | null>(null);
   const [deleting, setDeleting] = useState<PurchaseHistoryItem | null>(null);
   const [editingRate, setEditingRate] = useState<PurchaseHistoryItem | null>(null);
@@ -81,6 +92,8 @@ export function SecurityDetailPage() {
   if (!data) return null;
 
   const { security } = data;
+  // 증권사 필터 중에는 다른 증권사 매수분이 남아 있을 수 있어 "마지막 매수분"으로 보지 않는다
+  const isLastLot = !securityCompany && data.items.length === 1;
 
   return (
     <>
@@ -103,7 +116,7 @@ export function SecurityDetailPage() {
         <Button
           variant="contained"
           startIcon={<Add />}
-          onClick={() => openRegister(security)}
+          onClick={() => openRegister(security, securityCompany)}
           disableFocusRipple
           sx={staticFocusSx}
         >
@@ -132,9 +145,28 @@ export function SecurityDetailPage() {
       <PriceChartCard security={security} average={stats.average} />
 
       <Card sx={{ mt: 2 }}>
-        <CardHeader title="매수 내역" slotProps={{ title: { variant: 'h6' } }} />
+        <CardHeader
+          title="매수 내역"
+          slotProps={{ title: { variant: 'h6' } }}
+          action={
+            <SecurityCompanySelect
+              allowAll
+              size="small"
+              width={190}
+              value={securityCompany ?? null}
+              onChange={setSecurityCompany}
+            />
+          }
+          sx={{ flexWrap: 'wrap', gap: 1 }}
+        />
         {data.items.length === 0 ? (
-          <EmptyState title="매수 내역이 없습니다." />
+          <EmptyState
+            title={
+              securityCompany
+                ? `${securityCompanyLabel(securityCompany)} 매수 내역이 없습니다.`
+                : '매수 내역이 없습니다.'
+            }
+          />
         ) : (
           <PurchaseTable
             security={security}
@@ -155,11 +187,11 @@ export function SecurityDetailPage() {
       <DeletePurchaseDialog
         security={security}
         purchase={deleting}
-        isLast={data.items.length === 1}
+        isLast={isLastLot}
         onClose={() => setDeleting(null)}
         onDeleted={() => {
           // 마지막 매수분을 지우면 보유 종목에서 빠지므로 통합잔고로 돌아간다
-          if (data.items.length === 1) navigate('/');
+          if (isLastLot) navigate('/');
         }}
       />
     </>

@@ -19,7 +19,7 @@ import {
 } from '@mui/material';
 import { PieChart } from '@mui/x-charts/PieChart';
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useIntegratedBalance } from '../api/queries';
 import type { BalanceItem } from '../api/types';
 import {
@@ -32,6 +32,7 @@ import {
   StatCard,
 } from '../components/common';
 import { useLayout } from '../components/Layout';
+import { SecurityCompanySelect } from '../components/SecurityCompanySelect';
 import { CurrencyChip } from '../components/SecuritySearch';
 import {
   formatDate,
@@ -45,12 +46,22 @@ import {
   toNumber,
 } from '../lib/format';
 import { CHART_COLORS, KRW_COLOR, USD_COLOR } from '../lib/chart';
+import {
+  parseSecurityCompany,
+  type SecurityCompany,
+  securityCompanyLabel,
+} from '../lib/securityCompany';
 
 type Filter = 'ALL' | 'KRW' | 'USD';
 
 export function DashboardPage() {
   const { openRegister } = useLayout();
-  const { data, isLoading, error, refetch } = useIntegratedBalance();
+  // 증권사 필터는 URL 쿼리(?securityCompany=)에 둔다: 새로고침·뒤로 가기에도 유지
+  const [searchParams, setSearchParams] = useSearchParams();
+  const securityCompany = parseSecurityCompany(searchParams.get('securityCompany'));
+  const setSecurityCompany = (value: SecurityCompany | null) =>
+    setSearchParams(value ? { securityCompany: value } : {}, { replace: true });
+  const { data, isLoading, error, refetch } = useIntegratedBalance(securityCompany);
   const [filter, setFilter] = useState<Filter>('ALL');
 
   const items = useMemo(
@@ -62,9 +73,21 @@ export function DashboardPage() {
   );
 
   const registerButton = (
-    <Button variant="contained" startIcon={<Add />} onClick={() => openRegister()}>
+    <Button variant="contained" startIcon={<Add />} onClick={() => openRegister(undefined, securityCompany)}>
       매수 등록
     </Button>
+  );
+  const headerAction = (
+    <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+      <SecurityCompanySelect
+        allowAll
+        size="small"
+        width={190}
+        value={securityCompany ?? null}
+        onChange={setSecurityCompany}
+      />
+      {registerButton}
+    </Stack>
   );
 
   if (isLoading) return <Loading />;
@@ -74,13 +97,20 @@ export function DashboardPage() {
   if (data.items.length === 0) {
     return (
       <>
-        <PageHeader title="통합잔고" />
+        <PageHeader title="통합잔고" action={headerAction} />
         <Card>
-          <EmptyState
-            title="아직 보유 종목이 없어요"
-            description="첫 매수 내역을 등록하면 잔고·배당금·수익률을 계산해 드려요."
-            action={registerButton}
-          />
+          {securityCompany ? (
+            <EmptyState
+              title={`${securityCompanyLabel(securityCompany)}로 보유한 종목이 없어요`}
+              description="다른 증권사를 고르거나 전체 증권사로 바꿔 보세요."
+            />
+          ) : (
+            <EmptyState
+              title="아직 보유 종목이 없어요"
+              description="첫 매수 내역을 등록하면 잔고·배당금·수익률을 계산해 드려요."
+              action={registerButton}
+            />
+          )}
         </Card>
       </>
     );
@@ -101,7 +131,7 @@ export function DashboardPage() {
             ? `USD 환율 ${formatExchangeRate(data.exchangeRate)} (${formatDate(data.exchangeRateDate)} 기준) · 최신 종가 기준 평가`
             : '최신 종가 기준 평가'
         }
-        action={registerButton}
+        action={headerAction}
       />
 
       <Grid container spacing={2} sx={{ mb: 2 }}>
@@ -179,7 +209,7 @@ export function DashboardPage() {
                 </ToggleButtonGroup>
               }
             />
-            <HoldingsTable items={items} />
+            <HoldingsTable items={items} securityCompany={securityCompany} />
           </Card>
         </Grid>
       </Grid>
@@ -192,7 +222,14 @@ const formatRateRaw = (v: string) => {
   return `${n > 0 ? '+' : ''}${n.toFixed(2)}%`;
 };
 
-function HoldingsTable({ items }: { items: BalanceItem[] }) {
+function HoldingsTable({
+  items,
+  securityCompany,
+}: {
+  items: BalanceItem[];
+  /** 상세 화면에도 같은 증권사 필터를 넘긴다 */
+  securityCompany?: SecurityCompany;
+}) {
   const navigate = useNavigate();
   return (
     <TableContainer>
@@ -219,7 +256,11 @@ function HoldingsTable({ items }: { items: BalanceItem[] }) {
               <TableRow
                 key={item.securityId}
                 hover
-                onClick={() => navigate(`/securities/${encodeURIComponent(item.securityId)}`)}
+                onClick={() =>
+                  navigate(
+                    `/securities/${encodeURIComponent(item.securityId)}${securityCompany ? `?securityCompany=${securityCompany}` : ''}`,
+                  )
+                }
                 sx={{ cursor: 'pointer', '& td': { py: 1.25 } }}
               >
                 <TableCell>

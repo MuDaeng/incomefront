@@ -25,6 +25,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { NavLink, Outlet, useOutletContext } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { RegisterPurchaseDialog } from './RegisterPurchaseDialog';
+import type { SecurityCompany } from '../lib/securityCompany';
 import type { SecurityOption } from './SecuritySearch';
 
 const DRAWER_WIDTH = 232;
@@ -36,7 +37,8 @@ const NAV = [
 ];
 
 interface LayoutContext {
-  openRegister: (security?: SecurityOption) => void;
+  /** 매수 등록 창 열기. security를 주면 추가 매수(종목 고정), securityCompany는 증권사 처음 값 */
+  openRegister: (security?: SecurityOption, securityCompany?: SecurityCompany) => void;
 }
 
 export const useLayout = () => useOutletContext<LayoutContext>();
@@ -45,13 +47,15 @@ export function Layout() {
   const { logout } = useAuth();
   const { mode, systemMode, setMode } = useColorScheme();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [register, setRegister] = useState<{ open: boolean; security: SecurityOption | null }>({
-    open: false,
-    security: null,
-  });
+  const [register, setRegister] = useState<{
+    open: boolean;
+    security: SecurityOption | null;
+    securityCompany?: SecurityCompany;
+  }>({ open: false, security: null });
 
   const openRegister = useCallback(
-    (security?: SecurityOption) => setRegister({ open: true, security: security ?? null }),
+    (security?: SecurityOption, securityCompany?: SecurityCompany) =>
+      setRegister({ open: true, security: security ?? null, securityCompany }),
     [],
   );
   const context = useMemo<LayoutContext>(() => ({ openRegister }), [openRegister]);
@@ -186,6 +190,7 @@ export function Layout() {
       <RegisterPurchaseDialog
         open={register.open}
         initialSecurity={register.security}
+        initialSecurityCompany={register.securityCompany}
         onClose={() => setRegister((s) => ({ ...s, open: false }))}
       />
     </Box>

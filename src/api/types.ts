@@ -1,3 +1,5 @@
+import type { SecurityCompany } from '../lib/securityCompany';
+
 /**
  * 백엔드(income API) 응답 타입.
  * 금액·수량·수익률은 모두 decimal 문자열 (KRW 정수, USD 소수 6자리, 수익률은 소수 2자리 %).
@@ -99,6 +101,8 @@ export interface PurchaseHistoryResponse {
 
 export interface RegisterBalanceRequest {
   securityId: string;
+  /** 매수한 증권사 (필수) */
+  securityCompany: SecurityCompany;
   purchaseDate: string;
   amount: string;
   price: string;
