@@ -24,6 +24,8 @@ import { BarChart } from '@mui/x-charts/BarChart';
 import dayjs from 'dayjs';
 import { useMemo, useState } from 'react';
 import { useDividendHistory } from '../api/queries';
+import { SecurityCompanySelect } from '../components/SecurityCompanySelect';
+import { useSecurityCompanyParam } from '../lib/useSecurityCompanyParam';
 import type { DividendItem, MonthlyDividend } from '../api/types';
 import {
   EmptyState,
@@ -75,7 +77,12 @@ const monthsBetween = (from: string, to: string): string[] => {
 export function DividendsPage() {
   const [presetKey, setPresetKey] = useState<string | null>(PRESETS.thisYear.key);
   const [range, setRange] = useState<DateRange>(PRESETS.thisYear.range);
-  const { data, isLoading, isFetching, error, refetch } = useDividendHistory(range.from, range.to);
+  const [securityCompany, setSecurityCompany] = useSecurityCompanyParam();
+  const { data, isLoading, isFetching, error, refetch } = useDividendHistory(
+    range.from,
+    range.to,
+    securityCompany,
+  );
 
   const chartMonths = useMemo(() => {
     if (!data) return [];
@@ -105,7 +112,19 @@ export function DividendsPage() {
 
   return (
     <>
-      <PageHeader title="배당금" subtitle="배당 기준일 보유 수량 × 주당 배당금 · 미국 배당은 지급일 환율로 원화 환산" />
+      <PageHeader
+        title="배당금"
+        subtitle="배당 기준일 보유 수량 × 주당 배당금 · 미국 배당은 지급일 환율로 원화 환산"
+        action={
+          <SecurityCompanySelect
+            allowAll
+            size="small"
+            width={190}
+            value={securityCompany ?? null}
+            onChange={setSecurityCompany}
+          />
+        }
+      />
       <DateRangeBar
         presets={PRESET_LIST}
         presetKey={presetKey}

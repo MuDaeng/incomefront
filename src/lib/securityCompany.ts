@@ -66,3 +66,7 @@ export function saveLastSecurityCompany(value: SecurityCompany): void {
     /* 저장소 사용 불가 환경은 무시 */
   }
 }
+
+/** 종목 상세 경로. 증권사 필터가 있으면 쿼리로 넘겨 상세에서도 같은 증권사 매수분을 보게 한다 */
+export const securityDetailPath = (securityId: string, securityCompany?: SecurityCompany): string =>
+  `/securities/${encodeURIComponent(securityId)}${securityCompany ? `?securityCompany=${securityCompany}` : ''}`;

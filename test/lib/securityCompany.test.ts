@@ -4,6 +4,7 @@ import {
   saveLastSecurityCompany,
   SECURITY_COMPANIES,
   securityCompanyLabel,
+  securityDetailPath,
 } from '../../src/lib/securityCompany';
 
 describe('securityCompany', () => {
@@ -35,5 +36,13 @@ describe('securityCompany', () => {
     expect(loadLastSecurityCompany()).toBe('SAMSUNG');
     localStorage.setItem('income.lastSecurityCompany', 'NOPE');
     expect(loadLastSecurityCompany()).toBeNull();
+  });
+
+  it('종목 상세 경로에 증권사 필터를 쿼리로 붙인다', () => {
+    expect(securityDetailPath('KR7005930003')).toBe('/securities/KR7005930003');
+    expect(securityDetailPath('KR7005930003', 'KIWOOM')).toBe(
+      '/securities/KR7005930003?securityCompany=KIWOOM',
+    );
+    expect(securityDetailPath('A B/C')).toBe('/securities/A%20B%2FC');
   });
 });

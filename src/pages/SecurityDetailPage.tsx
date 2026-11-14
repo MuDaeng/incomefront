@@ -25,7 +25,7 @@ import {
 } from '@mui/material';
 import dayjs from 'dayjs';
 import { useMemo, useState } from 'react';
-import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
 import { useDailyPrices, usePurchases } from '../api/queries';
 import type { PurchaseHistoryItem, SecurityInfo } from '../api/types';
 import {
@@ -39,16 +39,14 @@ import {
 import { useLayout } from '../components/Layout';
 import { DeletePurchaseDialog } from '../components/DeletePurchaseDialog';
 import { EditExchangeRateDialog } from '../components/EditExchangeRateDialog';
+import { EditSecurityCompanyDialog } from '../components/EditSecurityCompanyDialog';
 import { CurrencyChip } from '../components/SecuritySearch';
 import { SecurityCompanySelect } from '../components/SecurityCompanySelect';
 import { SellDialog } from '../components/SellDialog';
 import { CandleChart } from '../components/CandleChart';
 import { type CandleInterval, toCandles, weekStart } from '../lib/candles';
-import {
-  parseSecurityCompany,
-  type SecurityCompany,
-  securityCompanyLabel,
-} from '../lib/securityCompany';
+import { securityCompanyLabel } from '../lib/securityCompany';
+import { useSecurityCompanyParam } from '../lib/useSecurityCompanyParam';
 import {
   formatDate,
   formatExchangeRate,
@@ -63,14 +61,12 @@ export function SecurityDetailPage() {
   const { securityId = '' } = useParams();
   const { openRegister } = useLayout();
   // 증권사 필터는 URL 쿼리(?securityCompany=)에 둔다 (통합잔고에서 넘어올 때도 유지)
-  const [searchParams, setSearchParams] = useSearchParams();
-  const securityCompany = parseSecurityCompany(searchParams.get('securityCompany'));
-  const setSecurityCompany = (value: SecurityCompany | null) =>
-    setSearchParams(value ? { securityCompany: value } : {}, { replace: true });
+  const [securityCompany, setSecurityCompany] = useSecurityCompanyParam();
   const { data, isLoading, error, refetch } = usePurchases(securityId, securityCompany);
   const [selling, setSelling] = useState<PurchaseHistoryItem | null>(null);
   const [deleting, setDeleting] = useState<PurchaseHistoryItem | null>(null);
   const [editingRate, setEditingRate] = useState<PurchaseHistoryItem | null>(null);
+  const [editingCompany, setEditingCompany] = useState<PurchaseHistoryItem | null>(null);
   const navigate = useNavigate();
 
   const stats = useMemo(() => {
@@ -174,11 +170,17 @@ export function SecurityDetailPage() {
             onSell={setSelling}
             onDelete={setDeleting}
             onEditRate={setEditingRate}
+            onEditCompany={setEditingCompany}
           />
         )}
       </Card>
 
       <SellDialog security={security} purchase={selling} onClose={() => setSelling(null)} />
+      <EditSecurityCompanyDialog
+        security={security}
+        purchase={editingCompany}
+        onClose={() => setEditingCompany(null)}
+      />
       <EditExchangeRateDialog
         security={security}
         purchase={editingRate}
@@ -204,12 +206,14 @@ function PurchaseTable({
   onSell,
   onDelete,
   onEditRate,
+  onEditCompany,
 }: {
   security: SecurityInfo;
   items: PurchaseHistoryItem[];
   onSell: (item: PurchaseHistoryItem) => void;
   onDelete: (item: PurchaseHistoryItem) => void;
   onEditRate: (item: PurchaseHistoryItem) => void;
+  onEditCompany: (item: PurchaseHistoryItem) => void;
 }) {
   const isUsd = security.currency === 'USD';
   return (
@@ -218,6 +222,7 @@ function PurchaseTable({
         <TableHead>
           <TableRow>
             <TableCell>매수일</TableCell>
+            <TableCell>증권사</TableCell>
             <TableCell align="right">수량</TableCell>
             <TableCell align="right">매수가</TableCell>
             <TableCell align="right">매수금액</TableCell>
@@ -234,6 +239,19 @@ function PurchaseTable({
                 <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.75 }}>
                   #{item.sequence}
                 </Typography>
+              </TableCell>
+              <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                {securityCompanyLabel(item.securityCompany)}
+                <Tooltip title="증권사 수정">
+                  <IconButton
+                    size="small"
+                    aria-label="증권사 수정"
+                    onClick={() => onEditCompany(item)}
+                    sx={{ ml: 0.25 }}
+                  >
+                    <EditOutlined sx={{ fontSize: 16 }} />
+                  </IconButton>
+                </Tooltip>
               </TableCell>
               <TableCell align="right">{formatQuantity(item.amount)}</TableCell>
               <TableCell align="right">{formatPrice(item.price, security.currency)}</TableCell>

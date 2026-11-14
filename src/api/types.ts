@@ -87,6 +87,8 @@ export interface IntegratedBalanceResponse {
 export interface PurchaseHistoryItem {
   purchaseDate: string;
   sequence: number;
+  /** 매수한 증권사 */
+  securityCompany: SecurityCompany;
   amount: string;
   price: string;
   saleDate: string | null;
@@ -117,6 +119,14 @@ export interface SellBalanceRequest {
   sequence: number;
   amount: string;
   saleDate: string;
+}
+
+/** 매수분 하나의 증권사 수정 (PATCH /balance/purchases/security-company 본문) */
+export interface UpdateSecurityCompanyRequest {
+  securityId: string;
+  purchaseDate: string;
+  sequence: number;
+  securityCompany: SecurityCompany;
 }
 
 /** 잘못 등록한 매수분 하나 삭제 (DELETE /balance/purchases 쿼리) */

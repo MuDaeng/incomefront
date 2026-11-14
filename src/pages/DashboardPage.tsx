@@ -19,7 +19,7 @@ import {
 } from '@mui/material';
 import { PieChart } from '@mui/x-charts/PieChart';
 import { useMemo, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useIntegratedBalance } from '../api/queries';
 import type { BalanceItem } from '../api/types';
 import {
@@ -47,20 +47,18 @@ import {
 } from '../lib/format';
 import { CHART_COLORS, KRW_COLOR, USD_COLOR } from '../lib/chart';
 import {
-  parseSecurityCompany,
   type SecurityCompany,
   securityCompanyLabel,
+  securityDetailPath,
 } from '../lib/securityCompany';
+import { useSecurityCompanyParam } from '../lib/useSecurityCompanyParam';
 
 type Filter = 'ALL' | 'KRW' | 'USD';
 
 export function DashboardPage() {
   const { openRegister } = useLayout();
   // 증권사 필터는 URL 쿼리(?securityCompany=)에 둔다: 새로고침·뒤로 가기에도 유지
-  const [searchParams, setSearchParams] = useSearchParams();
-  const securityCompany = parseSecurityCompany(searchParams.get('securityCompany'));
-  const setSecurityCompany = (value: SecurityCompany | null) =>
-    setSearchParams(value ? { securityCompany: value } : {}, { replace: true });
+  const [securityCompany, setSecurityCompany] = useSecurityCompanyParam();
   const { data, isLoading, error, refetch } = useIntegratedBalance(securityCompany);
   const [filter, setFilter] = useState<Filter>('ALL');
 
@@ -257,9 +255,7 @@ function HoldingsTable({
                 key={item.securityId}
                 hover
                 onClick={() =>
-                  navigate(
-                    `/securities/${encodeURIComponent(item.securityId)}${securityCompany ? `?securityCompany=${securityCompany}` : ''}`,
-                  )
+                  navigate(securityDetailPath(item.securityId, securityCompany))
                 }
                 sx={{ cursor: 'pointer', '& td': { py: 1.25 } }}
               >

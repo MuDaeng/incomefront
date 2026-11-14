@@ -18,6 +18,7 @@ import type {
   SecuritySearchItem,
   SellBalanceRequest,
   UpdateExchangeRateRequest,
+  UpdateSecurityCompanyRequest,
   User,
 } from './types';
 
@@ -31,12 +32,12 @@ export const queryKeys = {
     [...BALANCE_KEY, 'integrated', securityCompany ?? null] as const,
   purchases: (securityId: string, securityCompany?: SecurityCompany) =>
     [...BALANCE_KEY, 'purchases', securityId, securityCompany ?? null] as const,
-  dividends: (from?: string, to?: string) =>
-    [...BALANCE_KEY, 'dividends', from ?? null, to ?? null] as const,
-  returns: (from: string, to: string) =>
-    [...BALANCE_KEY, 'returns', from, to] as const,
-  monthly: (from: string, to: string) =>
-    [...BALANCE_KEY, 'monthly', from, to] as const,
+  dividends: (from?: string, to?: string, securityCompany?: SecurityCompany) =>
+    [...BALANCE_KEY, 'dividends', from ?? null, to ?? null, securityCompany ?? null] as const,
+  returns: (from: string, to: string, securityCompany?: SecurityCompany) =>
+    [...BALANCE_KEY, 'returns', from, to, securityCompany ?? null] as const,
+  monthly: (from: string, to: string, securityCompany?: SecurityCompany) =>
+    [...BALANCE_KEY, 'monthly', from, to, securityCompany ?? null] as const,
   securitySearch: (keyword: string) => ['securities', keyword] as const,
   dailyPrices: (securityId: string, from?: string, to?: string) =>
     ['daily-prices', securityId, from ?? null, to ?? null] as const,
@@ -68,36 +69,43 @@ export const usePurchases = (securityId: string, securityCompany?: SecurityCompa
     placeholderData: keepPreviousData,
   });
 
-export const useDividendHistory = (from?: string, to?: string) =>
+/** 배당금 내역. securityCompany를 주면 그 증권사 보유 수량으로만 계산 */
+export const useDividendHistory = (from?: string, to?: string, securityCompany?: SecurityCompany) =>
   useQuery({
-    queryKey: queryKeys.dividends(from, to),
+    queryKey: queryKeys.dividends(from, to, securityCompany),
     queryFn: ({ signal }) =>
       request<DividendHistoryResponse>('/balance/dividends', {
-        query: { from, to },
+        query: { from, to, securityCompany },
         signal,
       }),
     placeholderData: keepPreviousData,
   });
 
-export const usePeriodReturn = (from: string, to: string) =>
+/** 기간 수익률. securityCompany를 주면 그 증권사 매수분·보유 수량으로만 계산 */
+export const usePeriodReturn = (from: string, to: string, securityCompany?: SecurityCompany) =>
   useQuery({
-    queryKey: queryKeys.returns(from, to),
+    queryKey: queryKeys.returns(from, to, securityCompany),
     queryFn: ({ signal }) =>
       request<PeriodReturnResponse>('/balance/returns', {
-        query: { from, to },
+        query: { from, to, securityCompany },
         signal,
       }),
     placeholderData: keepPreviousData,
   });
 
 /** 월말별 원금·평가금액·누적배당금 (from/to는 'YYYY-MM', to는 이번 달까지, 최대 120개월) */
-export const useMonthlyBalance = (from: string, to: string, enabled = true) =>
+export const useMonthlyBalance = (
+  from: string,
+  to: string,
+  enabled = true,
+  securityCompany?: SecurityCompany,
+) =>
   useQuery({
-    queryKey: queryKeys.monthly(from, to),
+    queryKey: queryKeys.monthly(from, to, securityCompany),
     enabled,
     queryFn: ({ signal }) =>
       request<MonthlyBalanceResponse>('/balance/monthly', {
-        query: { from, to },
+        query: { from, to, securityCompany },
         signal,
       }),
     placeholderData: keepPreviousData,
@@ -172,6 +180,16 @@ export const useUpdateExchangeRate = () => {
   return useMutation({
     mutationFn: (body: UpdateExchangeRateRequest) =>
       request('/balance/purchases', { method: 'PATCH', body }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: BALANCE_KEY }),
+  });
+};
+
+/** 매수분 하나의 증권사 수정. 증권사 필터 결과가 바뀌므로 balance 전체를 무효화한다 */
+export const useUpdateSecurityCompany = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: UpdateSecurityCompanyRequest) =>
+      request('/balance/purchases/security-company', { method: 'PATCH', body }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: BALANCE_KEY }),
   });
 };

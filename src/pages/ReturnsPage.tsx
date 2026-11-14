@@ -31,6 +31,8 @@ import {
 } from '../components/common';
 import { DateRange, DateRangeBar, PRESETS } from '../components/DateRangeBar';
 import { MonthlyTrendSection } from '../components/MonthlyTrendSection';
+import { SecurityCompanySelect } from '../components/SecurityCompanySelect';
+import { useSecurityCompanyParam } from '../lib/useSecurityCompanyParam';
 import { CurrencyChip } from '../components/SecuritySearch';
 import { KRW_COLOR, USD_COLOR } from '../lib/chart';
 import {
@@ -61,13 +63,23 @@ export function ReturnsPage() {
   const [range, setRange] = useState<DateRange>(PRESETS.ytd.range);
   const from = range.from!;
   const to = range.to!;
-  const { data, isLoading, isFetching, error, refetch } = usePeriodReturn(from, to);
+  const [securityCompany, setSecurityCompany] = useSecurityCompanyParam();
+  const { data, isLoading, isFetching, error, refetch } = usePeriodReturn(from, to, securityCompany);
 
   return (
     <>
       <PageHeader
         title="기간 수익률"
         subtitle="종료일 보유분 평가손익 + 기간 중 받은 배당금 = 원금 대비 총수익"
+        action={
+          <SecurityCompanySelect
+            allowAll
+            size="small"
+            width={190}
+            value={securityCompany ?? null}
+            onChange={setSecurityCompany}
+          />
+        }
       />
       <DateRangeBar
         presets={PRESET_LIST}
@@ -88,7 +100,7 @@ export function ReturnsPage() {
         <ReturnsContent data={data} />
       ) : null}
       {/* 같은 기간의 월말별 추이 (기간 수익률 조회 결과와 무관하게 따로 조회) */}
-      <MonthlyTrendSection from={from} to={to} />
+      <MonthlyTrendSection from={from} to={to} securityCompany={securityCompany} />
     </>
   );
 }
