@@ -9,6 +9,7 @@ import type {
   DailyPriceResponse,
   DeletePurchaseRequest,
   DividendHistoryResponse,
+  MonthlyBalanceResponse,
   IntegratedBalanceResponse,
   PeriodReturnResponse,
   PurchaseHistoryResponse,
@@ -32,6 +33,8 @@ export const queryKeys = {
     [...BALANCE_KEY, 'dividends', from ?? null, to ?? null] as const,
   returns: (from: string, to: string) =>
     [...BALANCE_KEY, 'returns', from, to] as const,
+  monthly: (from: string, to: string) =>
+    [...BALANCE_KEY, 'monthly', from, to] as const,
   securitySearch: (keyword: string) => ['securities', keyword] as const,
   dailyPrices: (securityId: string, from?: string, to?: string) =>
     ['daily-prices', securityId, from ?? null, to ?? null] as const,
@@ -71,6 +74,18 @@ export const usePeriodReturn = (from: string, to: string) =>
     queryKey: queryKeys.returns(from, to),
     queryFn: ({ signal }) =>
       request<PeriodReturnResponse>('/balance/returns', {
+        query: { from, to },
+        signal,
+      }),
+    placeholderData: keepPreviousData,
+  });
+
+/** 월말별 원금·평가금액·누적배당금 (from/to는 'YYYY-MM', to는 이번 달까지, 최대 120개월) */
+export const useMonthlyBalance = (from: string, to: string) =>
+  useQuery({
+    queryKey: queryKeys.monthly(from, to),
+    queryFn: ({ signal }) =>
+      request<MonthlyBalanceResponse>('/balance/monthly', {
         query: { from, to },
         signal,
       }),

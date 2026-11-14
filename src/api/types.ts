@@ -130,6 +130,43 @@ export interface UpdateExchangeRateRequest {
   exchangeRate: string | null;
 }
 
+/* ---------- 월별 추이 (GET /balance/monthly) — 금액은 모두 원화 정수 decimal 문자열 ---------- */
+export interface MonthlyBalanceTotal {
+  /** 원금 */
+  purchaseAmount: string;
+  /** 평가금액 (기준일 종가 × 수량, USD는 기준일 환율) */
+  evaluationAmount: string;
+  /** 누적배당금: 처음부터 기준일까지 지급된 배당금 합계 (from 이전 포함) */
+  dividendAmount: string;
+  /** 평가금액 + 누적배당금 */
+  totalAmount: string;
+}
+
+export interface MonthlyBalanceItem extends MonthlyBalanceTotal {
+  securityId: string;
+  name: string;
+  currency: Currency;
+  /** 기준일 보유 수량 (매도 후 배당만 남은 종목은 0) */
+  quantity: string;
+}
+
+export interface MonthlyBalanceMonth {
+  /** 'YYYY-MM' */
+  month: string;
+  /** 평가 기준일 'YYYY-MM-DD' (월말, 이번 달이면 오늘) */
+  date: string;
+  total: MonthlyBalanceTotal;
+  /** 기준일 보유 종목 ∪ 누적배당금이 있는 종목, 종목 코드 순 */
+  items: MonthlyBalanceItem[];
+}
+
+export interface MonthlyBalanceResponse {
+  from: string;
+  to: string;
+  /** 오래된 달부터 */
+  months: MonthlyBalanceMonth[];
+}
+
 /* ---------- 배당 ---------- */
 export interface DividendItem {
   securityId: string;

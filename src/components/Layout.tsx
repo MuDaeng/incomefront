@@ -6,6 +6,7 @@ import Logout from '@mui/icons-material/Logout';
 import Menu from '@mui/icons-material/Menu';
 import PaidOutlined from '@mui/icons-material/PaidOutlined';
 import ShowChart from '@mui/icons-material/ShowChart';
+import TimelineOutlined from '@mui/icons-material/TimelineOutlined';
 import {
   AppBar,
   Box,
@@ -33,6 +34,7 @@ const NAV = [
   { to: '/', label: '통합잔고', icon: <AccountBalanceWalletOutlined /> },
   { to: '/dividends', label: '배당금', icon: <PaidOutlined /> },
   { to: '/returns', label: '기간 수익률', icon: <ShowChart /> },
+  { to: '/monthly', label: '월별 추이', icon: <TimelineOutlined /> },
 ];
 
 interface LayoutContext {
