@@ -1,6 +1,7 @@
 import Add from '@mui/icons-material/Add';
 import ArrowBack from '@mui/icons-material/ArrowBack';
 import DeleteOutline from '@mui/icons-material/DeleteOutlined';
+import EditOutlined from '@mui/icons-material/EditOutlined';
 import {
   Box,
   Button,
@@ -37,6 +38,7 @@ import {
 } from '../components/common';
 import { useLayout } from '../components/Layout';
 import { DeletePurchaseDialog } from '../components/DeletePurchaseDialog';
+import { EditExchangeRateDialog } from '../components/EditExchangeRateDialog';
 import { CurrencyChip } from '../components/SecuritySearch';
 import { SellDialog } from '../components/SellDialog';
 import { CandleChart } from '../components/CandleChart';
@@ -57,6 +59,7 @@ export function SecurityDetailPage() {
   const { data, isLoading, error, refetch } = usePurchases(securityId);
   const [selling, setSelling] = useState<PurchaseHistoryItem | null>(null);
   const [deleting, setDeleting] = useState<PurchaseHistoryItem | null>(null);
+  const [editingRate, setEditingRate] = useState<PurchaseHistoryItem | null>(null);
   const navigate = useNavigate();
 
   const stats = useMemo(() => {
@@ -138,11 +141,17 @@ export function SecurityDetailPage() {
             items={data.items}
             onSell={setSelling}
             onDelete={setDeleting}
+            onEditRate={setEditingRate}
           />
         )}
       </Card>
 
       <SellDialog security={security} purchase={selling} onClose={() => setSelling(null)} />
+      <EditExchangeRateDialog
+        security={security}
+        purchase={editingRate}
+        onClose={() => setEditingRate(null)}
+      />
       <DeletePurchaseDialog
         security={security}
         purchase={deleting}
@@ -162,11 +171,13 @@ function PurchaseTable({
   items,
   onSell,
   onDelete,
+  onEditRate,
 }: {
   security: SecurityInfo;
   items: PurchaseHistoryItem[];
   onSell: (item: PurchaseHistoryItem) => void;
   onDelete: (item: PurchaseHistoryItem) => void;
+  onEditRate: (item: PurchaseHistoryItem) => void;
 }) {
   const isUsd = security.currency === 'USD';
   return (
@@ -213,6 +224,16 @@ function PurchaseTable({
                   ) : (
                     '-'
                   )}
+                  <Tooltip title="구매 환율 수정">
+                    <IconButton
+                      size="small"
+                      aria-label="구매 환율 수정"
+                      onClick={() => onEditRate(item)}
+                      sx={{ ml: 0.25 }}
+                    >
+                      <EditOutlined sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  </Tooltip>
                 </TableCell>
               )}
               <TableCell>

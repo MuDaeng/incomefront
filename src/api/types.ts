@@ -122,6 +122,14 @@ export interface DeletePurchaseRequest {
   sequence: number;
 }
 
+/** 매수분 하나의 구매 환율 수정 (PATCH /balance/purchases 본문). null이면 저장 환율 삭제 */
+export interface UpdateExchangeRateRequest {
+  securityId: string;
+  purchaseDate: string;
+  sequence: number;
+  exchangeRate: string | null;
+}
+
 /* ---------- 배당 ---------- */
 export interface DividendItem {
   securityId: string;

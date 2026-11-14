@@ -15,6 +15,7 @@ import type {
   RegisterBalanceRequest,
   SecuritySearchItem,
   SellBalanceRequest,
+  UpdateExchangeRateRequest,
   User,
 } from './types';
 
@@ -132,6 +133,19 @@ export const useDeletePurchase = () => {
         method: 'DELETE',
         query: { securityId, purchaseDate, sequence },
       }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: BALANCE_KEY }),
+  });
+};
+
+/**
+ * 매수분 하나의 구매 환율 수정 (USD 종목만). exchangeRate가 null이면 저장 환율을 지워
+ * 조회 시 매수일 환율로 돌아간다. 원화 원금이 바뀌므로 balance 전체를 무효화한다
+ */
+export const useUpdateExchangeRate = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: UpdateExchangeRateRequest) =>
+      request('/balance/purchases', { method: 'PATCH', body }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: BALANCE_KEY }),
   });
 };
