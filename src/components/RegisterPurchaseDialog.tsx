@@ -184,6 +184,7 @@ function RegisterPurchaseForm({
       },
       {
         onSuccess: () => {
+          // 매수 등록·증권사 수정이 같은 값을 공유: 다음에 열 때 이 증권사가 미리 선택된다
           saveLastSecurityCompany(securityCompany);
           notify(`${security.name} 매수 내역을 등록했습니다.`);
           onClose();

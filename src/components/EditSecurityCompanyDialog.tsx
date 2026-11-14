@@ -12,7 +12,12 @@ import { useUpdateSecurityCompany } from '../api/queries';
 import type { PurchaseHistoryItem, SecurityInfo } from '../api/types';
 import { formatDate, formatPrice, formatQuantity } from '../lib/format';
 import { isFieldEnter } from '../lib/keyboard';
-import { type SecurityCompany, securityCompanyLabel } from '../lib/securityCompany';
+import {
+  loadLastSecurityCompany,
+  saveLastSecurityCompany,
+  type SecurityCompany,
+  securityCompanyLabel,
+} from '../lib/securityCompany';
 import { KeyValue } from './common';
 import { useNotify } from './Notifier';
 import { SecurityCompanySelect } from './SecurityCompanySelect';
@@ -63,7 +68,10 @@ function EditSecurityCompanyForm({
   onClose: () => void;
 }) {
   const notify = useNotify();
-  const [company, setCompany] = useState<SecurityCompany | null>(purchase.securityCompany);
+  // 증권사별로 몰아서 고치는 경우가 많아, 마지막으로 고른 증권사를 미리 선택해 둔다 (없으면 현재 증권사)
+  const [company, setCompany] = useState<SecurityCompany | null>(
+    () => loadLastSecurityCompany() ?? purchase.securityCompany,
+  );
   const canSave = !!company && company !== purchase.securityCompany && !update.isPending;
 
   const save = () => {
@@ -77,6 +85,7 @@ function EditSecurityCompanyForm({
       },
       {
         onSuccess: () => {
+          saveLastSecurityCompany(company);
           notify(
             `${formatDate(purchase.purchaseDate)} 매수분 증권사를 ${securityCompanyLabel(company)}(으)로 바꿨습니다.`,
           );
