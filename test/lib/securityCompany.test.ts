@@ -4,6 +4,7 @@ import {
   saveLastSecurityCompany,
   SECURITY_COMPANIES,
   securityCompanyLabel,
+  securityCompanyShortLabel,
   securityDetailPath,
 } from '../../src/lib/securityCompany';
 
@@ -20,6 +21,19 @@ describe('securityCompany', () => {
     expect(securityCompanyLabel('KIWOOM')).toBe('키움증권');
     expect(securityCompanyLabel('ETC')).toBe('기타');
     expect(securityCompanyLabel('UNKNOWN')).toBe('UNKNOWN');
+  });
+
+  it('표용 짧은 이름: 증권·투자증권을 떼고, 한국투자증권은 한국투자', () => {
+    expect(securityCompanyShortLabel('TOSS')).toBe('토스');
+    expect(securityCompanyShortLabel('NH_INVESTMENT')).toBe('NH');
+    expect(securityCompanyShortLabel('KOREA_INVESTMENT')).toBe('한국투자');
+    expect(securityCompanyShortLabel('KAKAO_PAY')).toBe('카카오페이');
+    expect(securityCompanyShortLabel('ETC')).toBe('기타');
+    // 짧은 이름이 비거나 '증권'으로 끝나는 항목이 없어야 한다
+    for (const c of SECURITY_COMPANIES) {
+      expect(c.short).toBeTruthy();
+      expect(c.short.endsWith('증권')).toBe(false);
+    }
   });
 
   it('목록에 있는 값만 파싱', () => {

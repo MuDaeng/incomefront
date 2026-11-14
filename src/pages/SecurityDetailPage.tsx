@@ -45,7 +45,7 @@ import { SecurityCompanySelect } from '../components/SecurityCompanySelect';
 import { SellDialog } from '../components/SellDialog';
 import { CandleChart } from '../components/CandleChart';
 import { type CandleInterval, toCandles, weekStart } from '../lib/candles';
-import { securityCompanyLabel } from '../lib/securityCompany';
+import { securityCompanyLabel, securityCompanyShortLabel } from '../lib/securityCompany';
 import { useSecurityCompanyParam } from '../lib/useSecurityCompanyParam';
 import {
   formatDate,
@@ -241,7 +241,10 @@ function PurchaseTable({
                 </Typography>
               </TableCell>
               <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                {securityCompanyLabel(item.securityCompany)}
+                {/* 표에서는 짧은 이름(토스, NH 등), 마우스를 올리면 정식 이름 */}
+                <Tooltip title={securityCompanyLabel(item.securityCompany)}>
+                  <span>{securityCompanyShortLabel(item.securityCompany)}</span>
+                </Tooltip>
                 <Tooltip title="증권사 수정">
                   <IconButton
                     size="small"

@@ -1,45 +1,50 @@
 /**
- * 매수한 증권사. 백엔드 enum(libs/common/src/balance/security-company.enum.ts)과 순서·값을 맞춘다.
+ * 매수한 증권사. label은 정식 이름(입력·필터), short는 표에 쓰는 짧은 이름. 백엔드 enum(libs/common/src/balance/security-company.enum.ts)과 순서·값을 맞춘다.
  */
 export const SECURITY_COMPANIES = [
-  { value: 'MIRAE_ASSET', label: '미래에셋증권' },
-  { value: 'KOREA_INVESTMENT', label: '한국투자증권' },
-  { value: 'NH_INVESTMENT', label: 'NH투자증권' },
-  { value: 'SAMSUNG', label: '삼성증권' },
-  { value: 'KB', label: 'KB증권' },
-  { value: 'KIWOOM', label: '키움증권' },
-  { value: 'SHINHAN', label: '신한투자증권' },
-  { value: 'HANA', label: '하나증권' },
-  { value: 'MERITZ', label: '메리츠증권' },
-  { value: 'DAISHIN', label: '대신증권' },
-  { value: 'TOSS', label: '토스증권' },
-  { value: 'KAKAO_PAY', label: '카카오페이증권' },
-  { value: 'WOORI', label: '우리투자증권' },
-  { value: 'YUANTA', label: '유안타증권' },
-  { value: 'HANWHA', label: '한화투자증권' },
-  { value: 'KYOBO', label: '교보증권' },
-  { value: 'HYUNDAI_MOTOR', label: '현대차증권' },
-  { value: 'IM', label: 'iM증권' },
-  { value: 'DB', label: 'DB증권' },
-  { value: 'IBK', label: 'IBK투자증권' },
-  { value: 'SK', label: 'SK증권' },
-  { value: 'EUGENE', label: '유진투자증권' },
-  { value: 'LS', label: 'LS증권' },
-  { value: 'SHINYOUNG', label: '신영증권' },
-  { value: 'HANYANG', label: '한양증권' },
-  { value: 'BOOKOOK', label: '부국증권' },
-  { value: 'DAOL', label: '다올투자증권' },
-  { value: 'SANGSANGIN', label: '상상인증권' },
-  { value: 'BNK', label: 'BNK투자증권' },
-  { value: 'CAPE', label: '케이프투자증권' },
-  { value: 'HEUNGKUK', label: '흥국증권' },
-  { value: 'LEADING', label: '리딩투자증권' },
-  { value: 'ETC', label: '기타' },
+  { value: 'MIRAE_ASSET', label: '미래에셋증권', short: '미래에셋' },
+  { value: 'KOREA_INVESTMENT', label: '한국투자증권', short: '한국투자' },
+  { value: 'NH_INVESTMENT', label: 'NH투자증권', short: 'NH' },
+  { value: 'SAMSUNG', label: '삼성증권', short: '삼성' },
+  { value: 'KB', label: 'KB증권', short: 'KB' },
+  { value: 'KIWOOM', label: '키움증권', short: '키움' },
+  { value: 'SHINHAN', label: '신한투자증권', short: '신한' },
+  { value: 'HANA', label: '하나증권', short: '하나' },
+  { value: 'MERITZ', label: '메리츠증권', short: '메리츠' },
+  { value: 'DAISHIN', label: '대신증권', short: '대신' },
+  { value: 'TOSS', label: '토스증권', short: '토스' },
+  { value: 'KAKAO_PAY', label: '카카오페이증권', short: '카카오페이' },
+  { value: 'WOORI', label: '우리투자증권', short: '우리' },
+  { value: 'YUANTA', label: '유안타증권', short: '유안타' },
+  { value: 'HANWHA', label: '한화투자증권', short: '한화' },
+  { value: 'KYOBO', label: '교보증권', short: '교보' },
+  { value: 'HYUNDAI_MOTOR', label: '현대차증권', short: '현대차' },
+  { value: 'IM', label: 'iM증권', short: 'iM' },
+  { value: 'DB', label: 'DB증권', short: 'DB' },
+  { value: 'IBK', label: 'IBK투자증권', short: 'IBK' },
+  { value: 'SK', label: 'SK증권', short: 'SK' },
+  { value: 'EUGENE', label: '유진투자증권', short: '유진' },
+  { value: 'LS', label: 'LS증권', short: 'LS' },
+  { value: 'SHINYOUNG', label: '신영증권', short: '신영' },
+  { value: 'HANYANG', label: '한양증권', short: '한양' },
+  { value: 'BOOKOOK', label: '부국증권', short: '부국' },
+  { value: 'DAOL', label: '다올투자증권', short: '다올' },
+  { value: 'SANGSANGIN', label: '상상인증권', short: '상상인' },
+  { value: 'BNK', label: 'BNK투자증권', short: 'BNK' },
+  { value: 'CAPE', label: '케이프투자증권', short: '케이프' },
+  { value: 'HEUNGKUK', label: '흥국증권', short: '흥국' },
+  { value: 'LEADING', label: '리딩투자증권', short: '리딩' },
+  { value: 'ETC', label: '기타', short: '기타' },
 ] as const;
 
 export type SecurityCompany = (typeof SECURITY_COMPANIES)[number]['value'];
 
 const LABELS = new Map<string, string>(SECURITY_COMPANIES.map((c) => [c.value, c.label]));
+
+const SHORT_LABELS = new Map<string, string>(SECURITY_COMPANIES.map((c) => [c.value, c.short]));
+
+/** 표처럼 좁은 곳에 쓰는 짧은 이름 ('증권'·'투자증권'을 뗀 이름, 예: 토스, NH). 모르는 값은 그대로 */
+export const securityCompanyShortLabel = (value: string): string => SHORT_LABELS.get(value) ?? value;
 
 /** 증권사 코드 → 한국어 이름 (모르는 값은 그대로) */
 export const securityCompanyLabel = (value: string): string => LABELS.get(value) ?? value;
