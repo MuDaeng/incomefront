@@ -28,6 +28,13 @@ export const formatUsd = (value: Value, maxDigits = 2): string => {
 export const formatPrice = (value: Value, currency: Currency): string =>
   currency === 'KRW' ? formatKrw(value) : formatUsd(value, 4);
 
+/** 입력란에 채울 단가 문자열: 원화는 정수, 달러는 소수 2자리 (천 단위 구분 없음) */
+export const toPriceInput = (value: Value, currency: Currency): string => {
+  const n = toNumber(value);
+  if (Number.isNaN(n)) return '';
+  return currency === 'KRW' ? String(Math.round(n)) : n.toFixed(2);
+};
+
 /** 종목 통화 기준 금액 */
 export const formatMoney = (value: Value, currency: Currency): string =>
   currency === 'KRW' ? formatKrw(value) : formatUsd(value);

@@ -7,6 +7,7 @@ import {
   profitColor,
   RISE_COLOR,
   FALL_COLOR,
+  toPriceInput,
 } from '../../src/lib/format';
 
 describe('format', () => {
@@ -43,5 +44,12 @@ describe('format', () => {
     expect(profitColor('1')).toBe(RISE_COLOR);
     expect(profitColor('-1')).toBe(FALL_COLOR);
     expect(profitColor('0')).toBeUndefined();
+  });
+
+  it('입력란 단가: 원화는 정수, 달러는 소수 2자리', () => {
+    expect(toPriceInput('123.456789', 'USD')).toBe('123.46');
+    expect(toPriceInput('50.000000', 'USD')).toBe('50.00');
+    expect(toPriceInput('71000', 'KRW')).toBe('71000');
+    expect(toPriceInput(null, 'USD')).toBe('');
   });
 });

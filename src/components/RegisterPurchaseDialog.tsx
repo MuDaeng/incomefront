@@ -17,7 +17,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs, { Dayjs } from 'dayjs';
 import { useEffect, useState } from 'react';
 import { useDailyPrices, useRegisterBalance } from '../api/queries';
-import { formatDate, formatMoney, formatPrice, isPositiveDecimal } from '../lib/format';
+import { formatDate, formatMoney, isPositiveDecimal, toPriceInput } from '../lib/format';
 import { useNotify } from './Notifier';
 import { SecurityOption, SecuritySearch } from './SecuritySearch';
 
@@ -71,10 +71,11 @@ function RegisterPurchaseForm({
     if (next?.priceDate && !dateTouched) setPurchaseDate(dayjs(next.priceDate));
   };
 
-  // 매수일 종가로 매수가 자동 채우기 (직접 입력 전까지)
+  // 매수일 종가로 매수가 자동 채우기 (직접 입력 전까지). 달러는 소수 2자리로 맞춘다
+  const currency = security?.currency;
   useEffect(() => {
-    if (closing && !priceTouched) setPrice(closing);
-  }, [closing, priceTouched]);
+    if (closing && currency && !priceTouched) setPrice(toPriceInput(closing, currency));
+  }, [closing, currency, priceTouched]);
 
   const amountError = amount !== '' && !isPositiveDecimal(amount);
   const priceError = price !== '' && !isPositiveDecimal(price);
@@ -141,7 +142,7 @@ function RegisterPurchaseForm({
                 helperText: noPriceOnDate
                   ? '해당 매수일의 시세가 없습니다. 휴장일인지 확인해 주세요.'
                   : closing && security
-                    ? `이날 종가 ${formatPrice(closing, security.currency)}`
+                    ? `이날 종가 ${formatMoney(closing, security.currency)}`
                     : ' ',
               },
             }}
