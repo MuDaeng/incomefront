@@ -18,7 +18,7 @@ import {
 } from '@mui/material';
 import { BarChart } from '@mui/x-charts/BarChart';
 import { useMemo, useState } from 'react';
-import { usePeriodReturn } from '../api/queries';
+import { usePeriodReturn, useSecurityCompanies } from '../api/queries';
 import type { PeriodReturnResponse } from '../api/types';
 import {
   EmptyState,
@@ -32,6 +32,7 @@ import {
 import { DateRange, DateRangeBar, PRESETS } from '../components/DateRangeBar';
 import { MonthlyTrendSection } from '../components/MonthlyTrendSection';
 import { SecurityCompanySelect } from '../components/SecurityCompanySelect';
+import { filterCompanyOptions } from '../lib/securityCompany';
 import { useSecurityCompanyParam } from '../lib/useSecurityCompanyParam';
 import { CurrencyChip } from '../components/SecuritySearch';
 import { KRW_COLOR, USD_COLOR } from '../lib/chart';
@@ -64,6 +65,8 @@ export function ReturnsPage() {
   const from = range.from!;
   const to = range.to!;
   const [securityCompany, setSecurityCompany] = useSecurityCompanyParam();
+  // 필터 목록은 매수 기록이 있는 증권사만
+  const { data: companies } = useSecurityCompanies();
   const { data, isLoading, isFetching, error, refetch } = usePeriodReturn(from, to, securityCompany);
 
   return (
@@ -78,6 +81,7 @@ export function ReturnsPage() {
             width={190}
             value={securityCompany ?? null}
             onChange={setSecurityCompany}
+            companies={filterCompanyOptions(companies, securityCompany)}
           />
         }
       />

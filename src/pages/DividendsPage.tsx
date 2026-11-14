@@ -23,8 +23,9 @@ import {
 import { BarChart } from '@mui/x-charts/BarChart';
 import dayjs from 'dayjs';
 import { useMemo, useState } from 'react';
-import { useDividendHistory } from '../api/queries';
+import { useDividendHistory, useSecurityCompanies } from '../api/queries';
 import { SecurityCompanySelect } from '../components/SecurityCompanySelect';
+import { filterCompanyOptions } from '../lib/securityCompany';
 import { useSecurityCompanyParam } from '../lib/useSecurityCompanyParam';
 import type { DividendItem, MonthlyDividend } from '../api/types';
 import {
@@ -78,6 +79,8 @@ export function DividendsPage() {
   const [presetKey, setPresetKey] = useState<string | null>(PRESETS.thisYear.key);
   const [range, setRange] = useState<DateRange>(PRESETS.thisYear.range);
   const [securityCompany, setSecurityCompany] = useSecurityCompanyParam();
+  // 필터 목록은 매수 기록이 있는 증권사만
+  const { data: companies } = useSecurityCompanies();
   const { data, isLoading, isFetching, error, refetch } = useDividendHistory(
     range.from,
     range.to,
@@ -122,6 +125,7 @@ export function DividendsPage() {
             width={190}
             value={securityCompany ?? null}
             onChange={setSecurityCompany}
+            companies={filterCompanyOptions(companies, securityCompany)}
           />
         }
       />
