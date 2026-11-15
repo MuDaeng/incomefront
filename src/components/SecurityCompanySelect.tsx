@@ -1,4 +1,4 @@
-import { Autocomplete, TextField } from '@mui/material';
+import { Autocomplete, MenuItem, TextField } from '@mui/material';
 import type { Ref } from 'react';
 import { SECURITY_COMPANIES, type SecurityCompany } from '../lib/securityCompany';
 
@@ -8,7 +8,9 @@ const ALL_OPTION: Option = { value: null, label: '전체 증권사' };
 const OPTIONS: Option[] = SECURITY_COMPANIES.map((c) => ({ value: c.value, label: c.label }));
 
 /**
- * 증권사 선택. 이름을 쳐서 찾을 수 있다.
+ * 증권사 선택.
+ * - companies를 주면(서버의 매수 기록 증권사로 거른 필터) 검색 없는 select
+ * - 안 주면(등록·수정 다이얼로그, 전체 증권사) 이름을 쳐서 찾는 Autocomplete
  * - 등록용: value가 null이면 미선택
  * - 필터용(allowAll): 맨 앞 "전체 증권사"를 고르면 null
  */
@@ -39,6 +41,30 @@ export function SecurityCompanySelect({
   const base = companies ? OPTIONS.filter((o) => o.value && companies.includes(o.value)) : OPTIONS;
   const options = allowAll ? [ALL_OPTION, ...base] : base;
   const selected = options.find((o) => o.value === value) ?? (allowAll ? ALL_OPTION : null);
+
+  // 서버에서 받은 증권사 목록(필터)은 몇 개뿐이라 검색 없이 select로 고른다.
+  // Select는 null 값을 못 쓰므로 "전체/미선택"을 ''로 둔다
+  if (companies) {
+    return (
+      <TextField
+        select
+        value={selected?.value ?? ''}
+        onChange={(e) => onChange((e.target.value as SecurityCompany | '') || null)}
+        label={label}
+        size={size}
+        required={required}
+        autoFocus={autoFocus}
+        inputRef={inputRef}
+        sx={width ? { width } : undefined}
+      >
+        {options.map((o) => (
+          <MenuItem key={o.value ?? ''} value={o.value ?? ''}>
+            {o.label}
+          </MenuItem>
+        ))}
+      </TextField>
+    );
+  }
 
   return (
     <Autocomplete<Option, false, boolean>
