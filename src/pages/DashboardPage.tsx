@@ -51,6 +51,7 @@ import {
   securityCompanyLabel,
   securityDetailPath,
   filterCompanyOptions,
+  formatCompanyAmounts,
 } from '../lib/securityCompany';
 import { useSecurityCompanyParam } from '../lib/useSecurityCompanyParam';
 
@@ -251,6 +252,8 @@ function HoldingsTable({
           {items.map((item) => {
             const isUsd = item.currency === 'USD';
             const krwProfit = toNumber(item.krwEvaluationAmount) - toNumber(item.krwPurchaseAmount);
+            // 증권사가 2곳 이상일 때만 "토스 3 · NH 2"를 수량 아래에 보여 준다
+            const byCompany = formatCompanyAmounts(item.companyAmounts, formatQuantity);
             const usdProfit = isUsd
               ? toNumber(item.usdEvaluationAmount) - toNumber(item.usdPurchaseAmount)
               : null;
@@ -276,7 +279,10 @@ function HoldingsTable({
                     </Box>
                   </Stack>
                 </TableCell>
-                <TableCell align="right">{formatQuantity(item.amount)}</TableCell>
+                <TableCell align="right">
+                  {formatQuantity(item.amount)}
+                  {byCompany && <Secondary>{byCompany}</Secondary>}
+                </TableCell>
                 <TableCell align="right">{formatPrice(item.currentPrice, item.currency)}</TableCell>
                 <TableCell align="right">
                   {isUsd ? formatUsd(item.usdAveragePrice, 4) : formatKrw(item.krwAveragePrice)}

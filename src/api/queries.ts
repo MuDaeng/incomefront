@@ -7,6 +7,7 @@ import {
 import type { SecurityCompany } from '../lib/securityCompany';
 import { request } from './client';
 import type {
+  BulkSellBalanceRequest,
   DailyPriceResponse,
   DeletePurchaseRequest,
   DividendHistoryResponse,
@@ -156,6 +157,16 @@ export const useSellBalance = () => {
   return useMutation({
     mutationFn: (body: SellBalanceRequest) =>
       request('/balance/sale', { method: 'POST', body }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: BALANCE_KEY }),
+  });
+};
+
+/** 증권사별 일괄매도. 보유 수량이 모자라면 백엔드가 400을 주고 아무것도 매도하지 않는다 */
+export const useBulkSellBalance = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: BulkSellBalanceRequest) =>
+      request('/balance/sale/bulk', { method: 'POST', body }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: BALANCE_KEY }),
   });
 };

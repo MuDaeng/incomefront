@@ -45,11 +45,20 @@ export interface DailyPriceResponse {
 }
 
 /* ---------- 통합잔고 ---------- */
+/** 증권사 하나의 보유 수량 (미매도 매수분 합). 수량 있는 증권사만, enum 순서 */
+export interface CompanyAmount {
+  securityCompany: SecurityCompany;
+  amount: string;
+}
+
 export interface BalanceItem {
   securityId: string;
   name: string;
   currency: Currency;
+  /** 총 보유 수량 (증권사별 수량의 합) */
   amount: string;
+  /** 증권사별 보유 수량 (securityCompany 필터를 주면 그 증권사만) */
+  companyAmounts: CompanyAmount[];
   currentPrice: string;
   krwAveragePrice: string;
   usdAveragePrice: string | null;
@@ -98,6 +107,10 @@ export interface PurchaseHistoryItem {
 
 export interface PurchaseHistoryResponse {
   security: SecurityInfo;
+  /** 총 보유 수량 (미매도 매수분 합, securityCompany 필터 적용) */
+  amount: string;
+  /** 증권사별 보유 수량 (미매도분, 수량 있는 증권사만, enum 순서) */
+  companyAmounts: CompanyAmount[];
   items: PurchaseHistoryItem[];
 }
 
@@ -117,6 +130,14 @@ export interface SellBalanceRequest {
   securityId: string;
   purchaseDate: string;
   sequence: number;
+  amount: string;
+  saleDate: string;
+}
+
+/** 증권사별 일괄매도 (POST /balance/sale/bulk 본문). 그 증권사의 미매도 매수분 중 saleDate 이전(당일 포함) 매수분을 오래된 순으로 amount만큼 매도 */
+export interface BulkSellBalanceRequest {
+  securityId: string;
+  securityCompany: SecurityCompany;
   amount: string;
   saleDate: string;
 }

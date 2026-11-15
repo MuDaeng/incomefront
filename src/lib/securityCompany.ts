@@ -92,3 +92,17 @@ export function filterCompanyOptions(
   if (selected) keep.add(selected);
   return all.filter((value) => keep.has(value));
 }
+
+/**
+ * 증권사별 보유 수량을 한 줄로 (예: "토스 3 · NH 2").
+ * 증권사가 1곳 이하이면 총 수량과 같아 보여 줄 필요가 없으므로 null.
+ */
+export function formatCompanyAmounts(
+  companyAmounts: readonly { securityCompany: string; amount: string }[] | undefined,
+  formatAmount: (amount: string) => string,
+): string | null {
+  if (!companyAmounts || companyAmounts.length < 2) return null;
+  return companyAmounts
+    .map((c) => `${securityCompanyShortLabel(c.securityCompany)} ${formatAmount(c.amount)}`)
+    .join(' · ');
+}

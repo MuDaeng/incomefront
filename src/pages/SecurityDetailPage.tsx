@@ -43,10 +43,12 @@ import { EditSecurityCompanyDialog } from '../components/EditSecurityCompanyDial
 import { CurrencyChip } from '../components/SecuritySearch';
 import { SecurityCompanySelect } from '../components/SecurityCompanySelect';
 import { SellDialog } from '../components/SellDialog';
+import { BulkSellDialog } from '../components/BulkSellDialog';
 import { CandleChart } from '../components/CandleChart';
 import { type CandleInterval, toCandles, weekStart } from '../lib/candles';
 import {
   filterCompanyOptions,
+  formatCompanyAmounts,
   securityCompanyLabel,
   securityCompanyShortLabel,
 } from '../lib/securityCompany';
@@ -70,6 +72,7 @@ export function SecurityDetailPage() {
   // 필터 목록은 매수 기록이 있는 증권사만
   const { data: companies } = useSecurityCompanies();
   const [selling, setSelling] = useState<PurchaseHistoryItem | null>(null);
+  const [bulkSelling, setBulkSelling] = useState(false);
   const [deleting, setDeleting] = useState<PurchaseHistoryItem | null>(null);
   const [editingRate, setEditingRate] = useState<PurchaseHistoryItem | null>(null);
   const [editingCompany, setEditingCompany] = useState<PurchaseHistoryItem | null>(null);
@@ -124,11 +127,23 @@ export function SecurityDetailPage() {
         >
           추가 매수
         </Button>
+        <Button
+          variant="outlined"
+          color="error"
+          onClick={() => setBulkSelling(true)}
+          disabled={data.companyAmounts.length === 0}
+        >
+          일괄매도
+        </Button>
       </Stack>
 
       <Grid container spacing={2} sx={{ mb: 2 }}>
         <Grid size={{ xs: 6, md: 3 }}>
-          <StatCard label="보유 수량" value={`${formatQuantity(stats.quantity)}주`} />
+          <StatCard
+            label="보유 수량"
+            value={`${formatQuantity(data.amount)}주`}
+            sub={formatCompanyAmounts(data.companyAmounts, formatQuantity)}
+          />
         </Grid>
         <Grid size={{ xs: 6, md: 3 }}>
           <StatCard
@@ -183,6 +198,13 @@ export function SecurityDetailPage() {
       </Card>
 
       <SellDialog security={security} purchase={selling} onClose={() => setSelling(null)} />
+      <BulkSellDialog
+        open={bulkSelling}
+        security={security}
+        companyAmounts={data.companyAmounts}
+        initialCompany={securityCompany}
+        onClose={() => setBulkSelling(false)}
+      />
       <EditSecurityCompanyDialog
         security={security}
         purchase={editingCompany}
