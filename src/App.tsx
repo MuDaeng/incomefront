@@ -25,6 +25,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { DividendsPage } from './pages/DividendsPage';
 import { LoginPage } from './pages/LoginPage';
 import { ReturnsPage } from './pages/ReturnsPage';
+import { AdminBatchPage } from './pages/AdminBatchPage';
 import { SecurityDetailPage } from './pages/SecurityDetailPage';
 import { theme } from './theme';
 
@@ -85,6 +86,7 @@ export default function App() {
                       <Route path="securities/:securityId" element={<SecurityDetailPage />} />
                       <Route path="dividends" element={<DividendsPage />} />
                       <Route path="returns" element={<ReturnsPage />} />
+                      <Route path="admin/batches" element={<AdminBatchPage />} />
                       <Route path="*" element={<NotFound />} />
                     </Route>
                   </Route>

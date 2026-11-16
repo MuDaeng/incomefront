@@ -1,6 +1,7 @@
 import AccountBalanceWalletOutlined from '@mui/icons-material/AccountBalanceWalletOutlined';
 import Add from '@mui/icons-material/Add';
 import DarkModeOutlined from '@mui/icons-material/DarkModeOutlined';
+import HistoryOutlined from '@mui/icons-material/HistoryOutlined';
 import LightModeOutlined from '@mui/icons-material/LightModeOutlined';
 import Logout from '@mui/icons-material/Logout';
 import Menu from '@mui/icons-material/Menu';
@@ -36,6 +37,9 @@ const NAV = [
   { to: '/returns', label: '기간 수익률', icon: <ShowChart /> },
 ];
 
+/** access token의 rules에 admin이 있을 때만 보이는 메뉴 (페이지 자체도 서버가 403으로 막는다) */
+const ADMIN_NAV = [{ to: '/admin/batches', label: '배치 이력', icon: <HistoryOutlined /> }];
+
 interface LayoutContext {
   /** 매수 등록 창 열기. security를 주면 추가 매수(종목 고정), securityCompany는 증권사 처음 값 */
   openRegister: (security?: SecurityOption, securityCompany?: SecurityCompany) => void;
@@ -44,7 +48,7 @@ interface LayoutContext {
 export const useLayout = () => useOutletContext<LayoutContext>();
 
 export function Layout() {
-  const { logout } = useAuth();
+  const { logout, isAdmin } = useAuth();
   const { mode, systemMode, setMode } = useColorScheme();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [register, setRegister] = useState<{
@@ -85,7 +89,7 @@ export function Layout() {
         </Typography>
       </Toolbar>
       <List sx={{ px: 1.5 }}>
-        {NAV.map((item) => (
+        {(isAdmin ? [...NAV, ...ADMIN_NAV] : NAV).map((item) => (
           <ListItemButton
             key={item.to}
             component={NavLink}

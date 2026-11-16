@@ -107,6 +107,28 @@ export const formatMonth = (month: string): string => {
 export const formatDate = (date: string | null | undefined): string =>
   date ? date.replaceAll('-', '.') : EMPTY;
 
+/** ISO 시각 → 로컬 시간 '2026.03.05 16:00:12' */
+export const formatDateTime = (value: string | null | undefined): string => {
+  if (!value) return EMPTY;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return EMPTY;
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}.${p(d.getMonth() + 1)}.${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+};
+
+/** 밀리초 → '850ms' / '12.3초' / '1분 23초' / '1시간 2분' */
+export const formatDuration = (ms: number | null | undefined): string => {
+  if (ms === null || ms === undefined || Number.isNaN(ms) || ms < 0) return EMPTY;
+  if (ms < 1000) return `${Math.round(ms)}ms`;
+  const sec = ms / 1000;
+  if (sec < 60) return `${Math.floor(sec * 10) / 10}초`;
+  const total = Math.floor(sec);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  return h > 0 ? `${h}시간 ${m}분` : `${m}분 ${s}초`;
+};
+
 /** 0보다 큰 십진수 문자열 (백엔드 positiveDecimalString과 동일 규칙) */
 export const isPositiveDecimal = (value: string): boolean =>
   /^\d+(\.\d+)?$/.test(value) && Number(value) > 0;

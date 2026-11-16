@@ -7,6 +7,8 @@ import {
 import type { SecurityCompany } from '../lib/securityCompany';
 import { request } from './client';
 import type {
+  BatchHistoryItem,
+  BatchStatus,
   BulkSellBalanceRequest,
   DailyPriceResponse,
   DeletePurchaseRequest,
@@ -47,6 +49,9 @@ export const queryKeys = {
     ['daily-prices', securityId, from ?? null, to ?? null] as const,
   /** 종목 월별 1주당 배당 (잔고와 무관해서 balance prefix를 쓰지 않는다) */
   securityDividends: (securityId: string) => ['securities', securityId, 'dividends'] as const,
+  /** 관리자 배치 이력 (잔고와 무관) */
+  batchHistories: (name: string | undefined, status: BatchStatus | undefined, limit: number) =>
+    ['admin', 'batch-histories', name ?? null, status ?? null, limit] as const,
 };
 
 /** 통합잔고. securityCompany를 주면 그 증권사 매수분만, 없으면 전체 */
@@ -230,4 +235,20 @@ export const useSecurityCompanies = () =>
     queryFn: ({ signal }) =>
       request<SecurityCompanyListResponse>('/balance/security-companies', { signal }),
     select: (data) => data.securityCompanies,
+  });
+
+/** GET /admin/batch-histories (관리자 전용, 아니면 403). name·status 생략 = 전체, limit 1~100 */
+export const useBatchHistories = (params: {
+  name?: string;
+  status?: BatchStatus;
+  limit: number;
+}) =>
+  useQuery({
+    queryKey: queryKeys.batchHistories(params.name, params.status, params.limit),
+    queryFn: ({ signal }) =>
+      request<BatchHistoryItem[]>('/admin/batch-histories', {
+        query: { name: params.name, status: params.status, limit: params.limit },
+        signal,
+      }),
+    placeholderData: keepPreviousData,
   });

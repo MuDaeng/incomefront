@@ -1,4 +1,6 @@
 import {
+  formatDateTime,
+  formatDuration,
   formatKrw,
   formatKrwCompact,
   formatRate,
@@ -69,5 +71,30 @@ describe('format', () => {
     expect(truncateDecimals(0.29 * 100, 0)).toBe(29);
     expect(truncateDecimals(3 * 1.1, 2)).toBe(3.3);
     expect(truncateDecimals(-1.239, 2)).toBe(-1.23);
+  });
+});
+
+describe('formatDuration', () => {
+  it('formats milliseconds by size', () => {
+    expect(formatDuration(850)).toBe('850ms');
+    expect(formatDuration(12345)).toBe('12.3초');
+    expect(formatDuration(83000)).toBe('1분 23초');
+    expect(formatDuration(3720000)).toBe('1시간 2분');
+  });
+
+  it('shows a dash for missing values', () => {
+    expect(formatDuration(null)).toBe(formatDuration(undefined));
+    expect(formatDuration(null)).not.toMatch(/d/);
+  });
+});
+
+describe('formatDateTime', () => {
+  it('formats an ISO time in local time', () => {
+    const d = new Date(2026, 2, 5, 16, 0, 12);
+    expect(formatDateTime(d.toISOString())).toBe('2026.03.05 16:00:12');
+  });
+
+  it('shows a dash for missing or invalid values', () => {
+    expect(formatDateTime(null)).toBe(formatDateTime('not-a-date'));
   });
 });

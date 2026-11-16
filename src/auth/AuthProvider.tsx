@@ -16,12 +16,15 @@ import {
 } from '../api/client';
 import { fetchMe } from '../api/queries';
 import type { User } from '../api/types';
+import { isAdminToken } from '../lib/jwt';
 
 type AuthStatus = 'loading' | 'authenticated' | 'anonymous';
 
 interface AuthContextValue {
   status: AuthStatus;
   user: User | null;
+  /** access token의 rules에 admin이 있는지 (관리자 메뉴 노출용, 권한 확인은 서버가 한다) */
+  isAdmin: boolean;
   /** /auth/callback 에서 호출: cookie의 refresh token으로 access token 발급 */
   completeLogin: () => Promise<void>;
   logout: () => void;
@@ -60,11 +63,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const [status, setStatus] = useState<AuthStatus>('loading');
   const [user, setUser] = useState<User | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [autoLoginError, setAutoLoginError] = useState<string | null>(null);
 
   const signOutLocally = useCallback(() => {
     setAccessToken(null);
     setUser(null);
+    setIsAdmin(false);
     setStatus('anonymous');
   }, []);
 
@@ -81,11 +86,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     let cancelled = false;
+    let admin = false;
     issueAccessToken()
-      .then(fetchMe)
+      .then((token) => {
+        admin = isAdminToken(token);
+        return fetchMe();
+      })
       .then((me) => {
         if (cancelled) return;
         setUser(me);
+        setIsAdmin(admin);
         setStatus('authenticated');
       })
       .catch((error) => {
@@ -101,10 +111,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const completeLogin = useCallback(async () => {
     storage.setLoggedOut(false);
-    await issueAccessToken();
+    const token = await issueAccessToken();
     const me = await fetchMe();
     setAutoLoginError(null);
     setUser(me);
+    setIsAdmin(isAdminToken(token));
     setStatus('authenticated');
   }, []);
 
@@ -115,8 +126,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [queryClient, signOutLocally]);
 
   const value = useMemo(
-    () => ({ status, user, completeLogin, logout, autoLoginError }),
-    [status, user, completeLogin, logout, autoLoginError],
+    () => ({ status, user, isAdmin, completeLogin, logout, autoLoginError }),
+    [status, user, isAdmin, completeLogin, logout, autoLoginError],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
