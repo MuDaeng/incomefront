@@ -47,7 +47,11 @@ import { DeletePurchaseDialog } from '../components/DeletePurchaseDialog';
 import { EditExchangeRateDialog } from '../components/EditExchangeRateDialog';
 import { EditSecurityCompanyDialog } from '../components/EditSecurityCompanyDialog';
 import { CurrencyChip, SymbolChip } from '../components/SecuritySearch';
-import { SecurityCompanyChip, SecurityCompanySelect } from '../components/SecurityCompanySelect';
+import {
+  CompanyAmountChips,
+  SecurityCompanyChip,
+  SecurityCompanySelect,
+} from '../components/SecurityCompanySelect';
 import { SellDialog } from '../components/SellDialog';
 import { BulkSellDialog } from '../components/BulkSellDialog';
 import { CandleChart } from '../components/CandleChart';
@@ -56,7 +60,6 @@ import { KRW_COLOR, USD_COLOR } from '../lib/chart';
 import { fillDividendMonths, monthTickLabel, trailingYearDividend } from '../lib/dividends';
 import {
   filterCompanyOptions,
-  formatCompanyAmounts,
   securityCompanyLabel,
 } from '../lib/securityCompany';
 import { useSecurityCompanyParam } from '../lib/useSecurityCompanyParam';
@@ -150,7 +153,9 @@ export function SecurityDetailPage() {
           <StatCard
             label="보유 수량"
             value={`${formatQuantity(data.amount)}주`}
-            sub={formatCompanyAmounts(data.companyAmounts, formatQuantity)}
+            sub={
+              <CompanyAmountChips companyAmounts={data.companyAmounts} formatAmount={formatQuantity} />
+            }
           />
         </Grid>
         <Grid size={{ xs: 6, md: 3 }}>

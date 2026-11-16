@@ -1,6 +1,5 @@
 import {
   filterCompanyOptions,
-  formatCompanyAmounts,
   loadLastSecurityCompany,
   parseSecurityCompany,
   saveLastSecurityCompany,
@@ -80,28 +79,6 @@ describe('securityCompany', () => {
       expect(filterCompanyOptions(['TOSS'], 'SAMSUNG')).toEqual(['SAMSUNG', 'TOSS']);
       expect(filterCompanyOptions([], 'KB')).toEqual(['KB']);
       expect(filterCompanyOptions([])).toEqual([]);
-    });
-  });
-
-  describe('formatCompanyAmounts', () => {
-    const fmt = (amount: string) => `${Number(amount)}`;
-
-    it('증권사가 1곳 이하이면 null', () => {
-      expect(formatCompanyAmounts(undefined, fmt)).toBeNull();
-      expect(formatCompanyAmounts([], fmt)).toBeNull();
-      expect(formatCompanyAmounts([{ securityCompany: 'TOSS', amount: '3' }], fmt)).toBeNull();
-    });
-
-    it('여러 곳이면 짧은 이름과 수량을 받은 순서대로 이어 붙인다', () => {
-      expect(
-        formatCompanyAmounts(
-          [
-            { securityCompany: 'NH_INVESTMENT', amount: '2.500000' },
-            { securityCompany: 'TOSS', amount: '3' },
-          ],
-          fmt,
-        ),
-      ).toBe('NH 2.5 · 토스 3');
     });
   });
 });

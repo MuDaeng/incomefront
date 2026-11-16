@@ -1,19 +1,25 @@
-import { alpha, Autocomplete, Box, Chip, MenuItem, TextField } from '@mui/material';
+import { alpha, Autocomplete, Box, Chip, MenuItem, Stack, TextField } from '@mui/material';
 import type { Ref } from 'react';
 import {
   SECURITY_COMPANIES,
   securityCompanyColor,
+  securityCompanyLabel,
   securityCompanyShortLabel,
   type SecurityCompany,
 } from '../lib/securityCompany';
 
-/** 표에서 증권사를 색으로 구분하는 칩: 증권사 색 점 + 옅은 배경 + 짧은 이름 */
-export function SecurityCompanyChip({ value }: { value: string }) {
+/**
+ * 증권사를 색으로 구분하는 칩: 증권사 색 점 + 옅은 배경 + 짧은 이름.
+ * amount를 주면 이름 뒤에 수량을 붙인다(예: "토스 3").
+ */
+export function SecurityCompanyChip({ value, amount }: { value: string; amount?: string }) {
   const color = securityCompanyColor(value);
+  const name = securityCompanyShortLabel(value);
   return (
     <Chip
       size="small"
-      label={securityCompanyShortLabel(value)}
+      label={amount === undefined ? name : `${name} ${amount}`}
+      title={amount === undefined ? undefined : securityCompanyLabel(value)}
       icon={
         <Box
           component="span"
@@ -30,6 +36,33 @@ export function SecurityCompanyChip({ value }: { value: string }) {
         '& .MuiChip-icon': { ml: 0.75, mr: -0.25 },
       }}
     />
+  );
+}
+
+/** 증권사별 보유 수량 칩 목록 (증권사가 1곳이어도 보여 준다). 비어 있으면 아무것도 그리지 않는다 */
+export function CompanyAmountChips({
+  companyAmounts,
+  formatAmount,
+  justify = 'flex-start',
+}: {
+  companyAmounts: readonly { securityCompany: string; amount: string }[] | undefined;
+  formatAmount: (amount: string) => string;
+  justify?: 'flex-start' | 'flex-end';
+}) {
+  if (!companyAmounts || companyAmounts.length === 0) return null;
+  return (
+    <Stack
+      direction="row"
+      sx={{ flexWrap: 'wrap', gap: 0.5, justifyContent: justify, mt: 0.5 }}
+    >
+      {companyAmounts.map((c) => (
+        <SecurityCompanyChip
+          key={c.securityCompany}
+          value={c.securityCompany}
+          amount={formatAmount(c.amount)}
+        />
+      ))}
+    </Stack>
   );
 }
 

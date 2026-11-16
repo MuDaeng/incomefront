@@ -32,7 +32,7 @@ import {
   StatCard,
 } from '../components/common';
 import { useLayout } from '../components/Layout';
-import { SecurityCompanySelect } from '../components/SecurityCompanySelect';
+import { CompanyAmountChips, SecurityCompanySelect } from '../components/SecurityCompanySelect';
 import { CurrencyChip, SymbolChip } from '../components/SecuritySearch';
 import {
   formatDate,
@@ -51,7 +51,6 @@ import {
   securityCompanyLabel,
   securityDetailPath,
   filterCompanyOptions,
-  formatCompanyAmounts,
 } from '../lib/securityCompany';
 import { useSecurityCompanyParam } from '../lib/useSecurityCompanyParam';
 
@@ -252,8 +251,6 @@ function HoldingsTable({
           {items.map((item) => {
             const isUsd = item.currency === 'USD';
             const krwProfit = toNumber(item.krwEvaluationAmount) - toNumber(item.krwPurchaseAmount);
-            // 증권사가 2곳 이상일 때만 "토스 3 · NH 2"를 수량 아래에 보여 준다
-            const byCompany = formatCompanyAmounts(item.companyAmounts, formatQuantity);
             const usdProfit = isUsd
               ? toNumber(item.usdEvaluationAmount) - toNumber(item.usdPurchaseAmount)
               : null;
@@ -281,7 +278,11 @@ function HoldingsTable({
                 </TableCell>
                 <TableCell align="right">
                   {formatQuantity(item.amount)}
-                  {byCompany && <Secondary>{byCompany}</Secondary>}
+                  <CompanyAmountChips
+                    companyAmounts={item.companyAmounts}
+                    formatAmount={formatQuantity}
+                    justify="flex-end"
+                  />
                 </TableCell>
                 <TableCell align="right">{formatPrice(item.currentPrice, item.currency)}</TableCell>
                 <TableCell align="right">
