@@ -145,7 +145,12 @@ export function Layout() {
         <Toolbar sx={{ gap: 1 }}>
           <IconButton
             edge="start"
-            onClick={() => setMobileOpen(true)}
+            // 메뉴(Drawer)가 열리면 MUI가 #root에 aria-hidden을 거는데, 이 버튼에 포커스가 남아 있으면
+            // 브라우저가 "Blocked aria-hidden … descendant retained focus" 경고를 낸다. 열기 전에 포커스를 뺀다
+            onClick={(e) => {
+              e.currentTarget.blur();
+              setMobileOpen(true);
+            }}
             sx={{ display: { md: 'none' } }}
             aria-label="메뉴 열기"
           >
