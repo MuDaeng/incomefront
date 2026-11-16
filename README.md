@@ -1,5 +1,7 @@
 # Getting Started with Create React App
 
+income 배당 포트폴리오 API의 프론트엔드 (React + MUI)
+
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
 ## Available Scripts
