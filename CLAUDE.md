@@ -18,6 +18,7 @@ Frontend for the **income** dividend-portfolio API (NestJS backend: https://gith
   - **Leave out git turns entirely**: commit, push, merge, branch-delete and PR requests and their replies are not logged — neither the request nor the result.
   - Group each session's turns under `# 대화 기록: <topics> (<YYYY-MM-DD>)`, separated from the previous session by `---`.
   - Still print the reply in the terminal as usual.
+- **GitHub Actions (`@claude` on issues/PRs, `.github/workflows/claude.yml`).** Only the repo owner/members/collaborators can trigger it. When running there, skip the `claude-output.md` log, commit on the `claude/issue-…` branch the action created (never push to `main`), and run the type-check, tests and build before committing. The workflow needs the `CLAUDE_CODE_OAUTH_TOKEN` repo secret and the Claude GitHub App installed on this repo.
 
 ## Commands
 
