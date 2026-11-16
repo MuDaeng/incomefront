@@ -114,7 +114,7 @@ export function SecurityDetailPage() {
             <CurrencyChip currency={security.currency} />
           </Stack>
           <Typography variant="body2" color="text.secondary">
-            {security.symbol} · {security.id}
+            {security.symbol}
           </Typography>
         </Box>
         {/* 매수 등록 창이 닫히면 포커스가 이 버튼으로 돌아오므로 포커스 펄스 애니메이션을 끈다 */}
