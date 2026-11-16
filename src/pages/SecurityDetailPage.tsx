@@ -103,6 +103,12 @@ export function SecurityDetailPage() {
     };
   }, [data]);
 
+  // 평균 매수가 카드의 현재가: 최근 한 달 시세의 마지막 종가 (날짜는 일 단위로 고정해 캐시 키를 유지)
+  const recentFrom = dayjs().subtract(1, 'month').format('YYYY-MM-DD');
+  const { data: recentPrices } = useDailyPrices(securityId, recentFrom);
+  const lastPrice = recentPrices?.prices[recentPrices.prices.length - 1];
+  const currentPrice = lastPrice ? toNumber(lastPrice.closingPrice) : null;
+
   if (isLoading) return <Loading />;
   if (error) return <ErrorAlert error={error} onRetry={() => refetch()} />;
   if (!data) return null;
@@ -162,6 +168,21 @@ export function SecurityDetailPage() {
           <StatCard
             label="평균 매수가"
             value={stats.average === null ? '-' : formatPrice(stats.average, security.currency)}
+            sub={
+              currentPrice !== null && (
+                <Typography variant="caption" color="text.secondary">
+                  현재가 {formatPrice(currentPrice, security.currency)}
+                  {stats.average !== null && stats.average > 0 && (
+                    <>
+                      {' '}
+                      <ProfitText value={(currentPrice / stats.average - 1) * 100} variant="caption">
+                        ({formatRate((currentPrice / stats.average - 1) * 100)})
+                      </ProfitText>
+                    </>
+                  )}
+                </Typography>
+              )
+            }
           />
         </Grid>
         <Grid size={{ xs: 6, md: 3 }}>

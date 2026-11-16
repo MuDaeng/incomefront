@@ -282,6 +282,7 @@ function HoldingsTable({
                     companyAmounts={item.companyAmounts}
                     formatAmount={formatQuantity}
                     justify="flex-end"
+                    hideSingleAmount
                   />
                 </TableCell>
                 <TableCell align="right">{formatPrice(item.currentPrice, item.currency)}</TableCell>

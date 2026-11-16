@@ -1,4 +1,4 @@
-import { alpha, Autocomplete, Box, Chip, MenuItem, Stack, TextField } from '@mui/material';
+import { alpha, Autocomplete, Chip, MenuItem, Stack, TextField } from '@mui/material';
 import type { Ref } from 'react';
 import {
   SECURITY_COMPANIES,
@@ -9,23 +9,25 @@ import {
 } from '../lib/securityCompany';
 
 /**
- * 증권사를 색으로 구분하는 칩: 증권사 색 점 + 옅은 배경 + 짧은 이름.
- * amount를 주면 이름 뒤에 수량을 붙인다(예: "토스 3").
+ * 증권사를 색으로 구분하는 칩: 증권사 색의 옅은 배경·테두리 + 짧은 이름.
+ * amount를 주면 이름 뒤에 수량을 붙인다(예: "토스 3"). showTitle이면 마우스를 올렸을 때 정식 이름을 보여 준다.
  */
-export function SecurityCompanyChip({ value, amount }: { value: string; amount?: string }) {
+export function SecurityCompanyChip({
+  value,
+  amount,
+  showTitle = false,
+}: {
+  value: string;
+  amount?: string;
+  showTitle?: boolean;
+}) {
   const color = securityCompanyColor(value);
   const name = securityCompanyShortLabel(value);
   return (
     <Chip
       size="small"
       label={amount === undefined ? name : `${name} ${amount}`}
-      title={amount === undefined ? undefined : securityCompanyLabel(value)}
-      icon={
-        <Box
-          component="span"
-          sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: color, flexShrink: 0 }}
-        />
-      }
+      title={showTitle ? securityCompanyLabel(value) : undefined}
       sx={{
         height: 22,
         fontSize: 12,
@@ -33,23 +35,28 @@ export function SecurityCompanyChip({ value, amount }: { value: string; amount?:
         bgcolor: alpha(color, 0.14),
         border: 1,
         borderColor: alpha(color, 0.45),
-        '& .MuiChip-icon': { ml: 0.75, mr: -0.25 },
       }}
     />
   );
 }
 
-/** 증권사별 보유 수량 칩 목록 (증권사가 1곳이어도 보여 준다). 비어 있으면 아무것도 그리지 않는다 */
+/**
+ * 증권사별 보유 수량 칩 목록 (증권사가 1곳이어도 보여 준다). 비어 있으면 아무것도 그리지 않는다.
+ * hideSingleAmount이면 증권사가 1곳일 때 수량 없이 이름만 (총 수량과 같으므로).
+ */
 export function CompanyAmountChips({
   companyAmounts,
   formatAmount,
   justify = 'flex-start',
+  hideSingleAmount = false,
 }: {
   companyAmounts: readonly { securityCompany: string; amount: string }[] | undefined;
   formatAmount: (amount: string) => string;
   justify?: 'flex-start' | 'flex-end';
+  hideSingleAmount?: boolean;
 }) {
   if (!companyAmounts || companyAmounts.length === 0) return null;
+  const withAmount = !(hideSingleAmount && companyAmounts.length === 1);
   return (
     <Stack
       direction="row"
@@ -59,7 +66,8 @@ export function CompanyAmountChips({
         <SecurityCompanyChip
           key={c.securityCompany}
           value={c.securityCompany}
-          amount={formatAmount(c.amount)}
+          amount={withAmount ? formatAmount(c.amount) : undefined}
+          showTitle
         />
       ))}
     </Stack>
