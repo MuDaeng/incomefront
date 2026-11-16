@@ -44,6 +44,21 @@ export interface DailyPriceResponse {
   prices: DailyPrice[];
 }
 
+/** GET /dividends: 지급월별 1주당 현금배당 합계 (지급 있는 달만, 월 오름차순) */
+export interface SecurityMonthlyDividend {
+  /** 지급월 YYYY-MM */
+  month: string;
+  /** 1주당 현금배당 합계 (KRW 정수, USD 소수 6자리) */
+  amount: string;
+  /** 그 달 지급 횟수 */
+  count: number;
+}
+
+export interface SecurityMonthlyDividendResponse {
+  security: SecurityInfo;
+  months: SecurityMonthlyDividend[];
+}
+
 /* ---------- 통합잔고 ---------- */
 /** 증권사 하나의 보유 수량 (미매도 매수분 합). 수량 있는 증권사만, enum 순서 */
 export interface CompanyAmount {
@@ -53,6 +68,8 @@ export interface CompanyAmount {
 
 export interface BalanceItem {
   securityId: string;
+  /** 종목 심볼 (티커/종목코드) */
+  symbol: string;
   name: string;
   currency: Currency;
   /** 총 보유 수량 (증권사별 수량의 합) */

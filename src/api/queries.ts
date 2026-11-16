@@ -17,6 +17,7 @@ import type {
   PurchaseHistoryResponse,
   RegisterBalanceRequest,
   SecurityCompanyListResponse,
+  SecurityMonthlyDividendResponse,
   SecuritySearchItem,
   SellBalanceRequest,
   UpdateExchangeRateRequest,
@@ -44,6 +45,8 @@ export const queryKeys = {
   securitySearch: (keyword: string) => ['securities', keyword] as const,
   dailyPrices: (securityId: string, from?: string, to?: string) =>
     ['daily-prices', securityId, from ?? null, to ?? null] as const,
+  /** 종목 월별 1주당 배당 (잔고와 무관해서 balance prefix를 쓰지 않는다) */
+  securityDividends: (securityId: string) => ['securities', securityId, 'dividends'] as const,
 };
 
 /** 통합잔고. securityCompany를 주면 그 증권사 매수분만, 없으면 전체 */
@@ -137,6 +140,19 @@ export const useDailyPrices = (
     queryFn: ({ signal }) =>
       request<DailyPriceResponse>('/daily-securities', {
         query: { securityId, from, to },
+        signal,
+      }),
+    enabled: !!securityId,
+    staleTime: 10 * 60 * 1000,
+  });
+
+/** GET /dividends (로그인 불필요, 30회/분): 종목의 지급월별 1주당 현금배당 합계 */
+export const useSecurityDividends = (securityId: string | undefined) =>
+  useQuery({
+    queryKey: queryKeys.securityDividends(securityId ?? ''),
+    queryFn: ({ signal }) =>
+      request<SecurityMonthlyDividendResponse>('/dividends', {
+        query: { securityId },
         signal,
       }),
     enabled: !!securityId,

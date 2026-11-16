@@ -23,10 +23,16 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
+import { BarChart } from '@mui/x-charts/BarChart';
 import dayjs from 'dayjs';
 import { useMemo, useState } from 'react';
 import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
-import { useDailyPrices, usePurchases, useSecurityCompanies } from '../api/queries';
+import {
+  useDailyPrices,
+  usePurchases,
+  useSecurityCompanies,
+  useSecurityDividends,
+} from '../api/queries';
 import type { PurchaseHistoryItem, SecurityInfo } from '../api/types';
 import {
   EmptyState,
@@ -46,6 +52,8 @@ import { SellDialog } from '../components/SellDialog';
 import { BulkSellDialog } from '../components/BulkSellDialog';
 import { CandleChart } from '../components/CandleChart';
 import { type CandleInterval, toCandles, weekStart } from '../lib/candles';
+import { KRW_COLOR, USD_COLOR } from '../lib/chart';
+import { fillDividendMonths, monthTickLabel, trailingYearDividend } from '../lib/dividends';
 import {
   filterCompanyOptions,
   formatCompanyAmounts,
@@ -57,6 +65,7 @@ import {
   formatDate,
   formatExchangeRate,
   formatMoney,
+  formatMonth,
   formatPrice,
   formatQuantity,
   formatRate,
@@ -160,6 +169,8 @@ export function SecurityDetailPage() {
       </Grid>
 
       <PriceChartCard security={security} average={stats.average} />
+
+      <DividendHistoryCard security={security} />
 
       <Card sx={{ mt: 2 }}>
         <CardHeader
@@ -362,6 +373,70 @@ const INTERVALS: { key: CandleInterval; label: string }[] = [
   { key: 'day', label: '일봉' },
   { key: 'week', label: '주봉' },
 ];
+
+/** 차트에 그리는 최대 개월 수 (KRW 배당은 2020년부터 쌓인다) */
+const DIVIDEND_CHART_MONTHS = 36;
+
+function DividendHistoryCard({ security }: { security: SecurityInfo }) {
+  const { data, isLoading, error } = useSecurityDividends(security.id);
+  const months = useMemo(() => data?.months ?? [], [data]);
+  const chartMonths = useMemo(() => fillDividendMonths(months, DIVIDEND_CHART_MONTHS), [months]);
+  const trailing = useMemo(
+    () => trailingYearDividend(months, dayjs().format('YYYY-MM-DD')),
+    [months],
+  );
+
+  return (
+    <Card sx={{ mt: 2 }}>
+      <CardHeader
+        title="월별 배당금 (1주당)"
+        slotProps={{ title: { variant: 'h6' } }}
+        subheader={
+          months.length > 0
+            ? `최근 12개월 ${formatPrice(trailing.amount, security.currency)} · ${trailing.count}회 지급`
+            : undefined
+        }
+      />
+      <CardContent sx={{ pt: 0 }}>
+        {isLoading ? (
+          <Loading minHeight={240} />
+        ) : error ? (
+          <ErrorAlert error={error} />
+        ) : chartMonths.length === 0 ? (
+          <EmptyState title="배당 내역이 없습니다." />
+        ) : (
+          <BarChart
+            height={260}
+            grid={{ horizontal: true }}
+            xAxis={[
+              {
+                scaleType: 'band',
+                data: chartMonths.map((m) => m.month),
+                valueFormatter: (m: string, ctx) =>
+                  ctx.location === 'tick' ? monthTickLabel(m) : formatMonth(m),
+              },
+            ]}
+            yAxis={[{ width: 64, valueFormatter: (v: number) => formatPrice(v, security.currency) }]}
+            series={[
+              {
+                data: chartMonths.map((m) => m.amount),
+                label: '1주당 배당금',
+                color: security.currency === 'KRW' ? KRW_COLOR : USD_COLOR,
+                valueFormatter: (v, { dataIndex }) => {
+                  const count = chartMonths[dataIndex]?.count ?? 0;
+                  const amount = formatPrice(v ?? 0, security.currency);
+                  return count > 1 ? `${amount} (${count}회)` : amount;
+                },
+              },
+            ]}
+            hideLegend
+            borderRadius={4}
+          />
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 function PriceChartCard({ security, average }: { security: SecurityInfo; average: number | null }) {
   const [rangeKey, setRangeKey] = useState<(typeof RANGES)[number]['key']>('6M');
