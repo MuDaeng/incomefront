@@ -7,9 +7,9 @@ Frontend for the **income** dividend-portfolio API (NestJS backend: https://gith
 ## Working rules (always apply)
 
 - **Reply in Korean** — progress updates, questions, final reports. Code identifiers and technical terms stay as-is.
-- **Git branch strategy.** The default branch is `main`. Commit only when asked.
-  - "커밋해줘" → create a short-lived branch off `main` (`feature/<topic>`, `fix/<topic>`, or `docs/<topic>`) and commit there. Never commit directly on `main`, even if the request says "커밋하고 main에 푸시해줘": commit on a branch first, then merge.
-  - "머지하고 push하고 브랜치 삭제해줘" (or a request to push to `main`) → `git merge --ff-only <branch>` into `main`, `git push origin main`, then delete the branch locally (`git branch -d`) and on the remote if it was pushed. If `main` has moved and fast-forward fails, stop and ask instead of creating a merge commit.
+- **Git branch strategy.** The default branch is `master`. Commit only when asked.
+  - "커밋해줘" → create a short-lived branch off `master` (`feature/<topic>`, `fix/<topic>`, or `docs/<topic>`) and commit there. Never commit directly on `master`, even if the request says "커밋하고 master에 푸시해줘": commit on a branch first, then merge.
+  - "머지하고 push하고 브랜치 삭제해줘" (or a request to push to `master`) → `git merge --ff-only <branch>` into `master`, `git push origin master`, then delete the branch locally (`git branch -d`) and on the remote if it was pushed. If `master` has moved and fast-forward fails, stop and ask instead of creating a merge commit.
   - After committing, offer the merge/push/delete step; don't run it unasked.
   - `.env.production` is committed (it holds only the public `REACT_APP_API_URL`; never put secrets in it — `REACT_APP_*` values are bundled into the client anyway). Never commit `.env.local` / `.env.*.local` or `claude-output.md` (gitignored). IDE files (`.idea/`) stay out of commits.
 - **Conversation log: `claude-output.md`** at the repo root (gitignored, never committed). The user's terminal has no scrollback, so they read the conversation in this file in WebStorm.
@@ -18,7 +18,7 @@ Frontend for the **income** dividend-portfolio API (NestJS backend: https://gith
   - **Leave out git turns entirely**: commit, push, merge, branch-delete and PR requests and their replies are not logged — neither the request nor the result.
   - Group each session's turns under `# 대화 기록: <topics> (<YYYY-MM-DD>)`, separated from the previous session by `---`.
   - Still print the reply in the terminal as usual.
-- **GitHub Actions (`@claude` on issues/PRs, `.github/workflows/claude.yml`).** Only the repo owner/members/collaborators can trigger it. When running there, skip the `claude-output.md` log, commit on the `claude/issue-…` branch the action created (never push to `main`), and run the type-check, tests and build before committing. The workflow needs the `CLAUDE_CODE_OAUTH_TOKEN` repo secret and the Claude GitHub App installed on this repo.
+- **GitHub Actions (`@claude` on issues/PRs, `.github/workflows/claude.yml`).** Only the repo owner/members/collaborators can trigger it. When running there, skip the `claude-output.md` log, commit on the `claude/issue-…` branch the action created (never push to `master`), and run the type-check, tests and build before committing. The workflow needs the `CLAUDE_CODE_OAUTH_TOKEN` repo secret and the Claude GitHub App installed on this repo.
 
 ## Commands
 
