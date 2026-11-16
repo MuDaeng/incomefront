@@ -26,6 +26,11 @@ export function CurrencyChip({ currency }: { currency: Currency }) {
   );
 }
 
+/** 종목 심볼(티커/종목코드)을 CurrencyChip과 같은 타원형으로 */
+export function SymbolChip({ symbol }: { symbol: string }) {
+  return <Chip size="small" variant="outlined" label={symbol} sx={{ height: 20, fontSize: 11 }} />;
+}
+
 export function SecuritySearch({
   value,
   onChange,

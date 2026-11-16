@@ -33,7 +33,7 @@ import {
 } from '../components/common';
 import { useLayout } from '../components/Layout';
 import { SecurityCompanySelect } from '../components/SecurityCompanySelect';
-import { CurrencyChip } from '../components/SecuritySearch';
+import { CurrencyChip, SymbolChip } from '../components/SecuritySearch';
 import {
   formatDate,
   formatExchangeRate,
@@ -273,9 +273,9 @@ function HoldingsTable({
                       <Typography variant="body2" sx={{ fontWeight: 600, maxWidth: 220 }} noWrap>
                         {item.name}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {item.symbol}
-                      </Typography>
+                      <Box sx={{ mt: 0.25 }}>
+                        <SymbolChip symbol={item.symbol} />
+                      </Box>
                     </Box>
                   </Stack>
                 </TableCell>

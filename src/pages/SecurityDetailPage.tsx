@@ -46,7 +46,7 @@ import { useLayout } from '../components/Layout';
 import { DeletePurchaseDialog } from '../components/DeletePurchaseDialog';
 import { EditExchangeRateDialog } from '../components/EditExchangeRateDialog';
 import { EditSecurityCompanyDialog } from '../components/EditSecurityCompanyDialog';
-import { CurrencyChip } from '../components/SecuritySearch';
+import { CurrencyChip, SymbolChip } from '../components/SecuritySearch';
 import { SecurityCompanySelect } from '../components/SecurityCompanySelect';
 import { SellDialog } from '../components/SellDialog';
 import { BulkSellDialog } from '../components/BulkSellDialog';
@@ -122,9 +122,9 @@ export function SecurityDetailPage() {
             </Typography>
             <CurrencyChip currency={security.currency} />
           </Stack>
-          <Typography variant="body2" color="text.secondary">
-            {security.symbol}
-          </Typography>
+          <Box sx={{ mt: 0.5 }}>
+            <SymbolChip symbol={security.symbol} />
+          </Box>
         </Box>
         {/* 매수 등록 창이 닫히면 포커스가 이 버튼으로 돌아오므로 포커스 펄스 애니메이션을 끈다 */}
         <Button
