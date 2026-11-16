@@ -269,14 +269,9 @@ function HoldingsTable({
                 <TableCell>
                   <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
                     <CurrencyChip currency={item.currency} />
-                    <Box sx={{ minWidth: 0 }}>
-                      <Typography variant="body2" sx={{ fontWeight: 600, maxWidth: 220 }} noWrap>
-                        {item.name}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {item.securityId}
-                      </Typography>
-                    </Box>
+                    <Typography variant="body2" sx={{ fontWeight: 600, maxWidth: 220, minWidth: 0 }} noWrap>
+                      {item.name}
+                    </Typography>
                   </Stack>
                 </TableCell>
                 <TableCell align="right">
