@@ -1,6 +1,37 @@
-import { Autocomplete, MenuItem, TextField } from '@mui/material';
+import { alpha, Autocomplete, Box, Chip, MenuItem, TextField } from '@mui/material';
 import type { Ref } from 'react';
-import { SECURITY_COMPANIES, type SecurityCompany } from '../lib/securityCompany';
+import {
+  SECURITY_COMPANIES,
+  securityCompanyColor,
+  securityCompanyShortLabel,
+  type SecurityCompany,
+} from '../lib/securityCompany';
+
+/** 표에서 증권사를 색으로 구분하는 칩: 증권사 색 점 + 옅은 배경 + 짧은 이름 */
+export function SecurityCompanyChip({ value }: { value: string }) {
+  const color = securityCompanyColor(value);
+  return (
+    <Chip
+      size="small"
+      label={securityCompanyShortLabel(value)}
+      icon={
+        <Box
+          component="span"
+          sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: color, flexShrink: 0 }}
+        />
+      }
+      sx={{
+        height: 22,
+        fontSize: 12,
+        fontWeight: 600,
+        bgcolor: alpha(color, 0.14),
+        border: 1,
+        borderColor: alpha(color, 0.45),
+        '& .MuiChip-icon': { ml: 0.75, mr: -0.25 },
+      }}
+    />
+  );
+}
 
 type Option = { value: SecurityCompany | null; label: string };
 

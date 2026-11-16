@@ -47,7 +47,7 @@ import { DeletePurchaseDialog } from '../components/DeletePurchaseDialog';
 import { EditExchangeRateDialog } from '../components/EditExchangeRateDialog';
 import { EditSecurityCompanyDialog } from '../components/EditSecurityCompanyDialog';
 import { CurrencyChip, SymbolChip } from '../components/SecuritySearch';
-import { SecurityCompanySelect } from '../components/SecurityCompanySelect';
+import { SecurityCompanyChip, SecurityCompanySelect } from '../components/SecurityCompanySelect';
 import { SellDialog } from '../components/SellDialog';
 import { BulkSellDialog } from '../components/BulkSellDialog';
 import { CandleChart } from '../components/CandleChart';
@@ -58,7 +58,6 @@ import {
   filterCompanyOptions,
   formatCompanyAmounts,
   securityCompanyLabel,
-  securityCompanyShortLabel,
 } from '../lib/securityCompany';
 import { useSecurityCompanyParam } from '../lib/useSecurityCompanyParam';
 import {
@@ -283,7 +282,9 @@ function PurchaseTable({
               <TableCell sx={{ whiteSpace: 'nowrap' }}>
                 {/* 표에서는 짧은 이름(토스, NH 등), 마우스를 올리면 정식 이름 */}
                 <Tooltip title={securityCompanyLabel(item.securityCompany)}>
-                  <span>{securityCompanyShortLabel(item.securityCompany)}</span>
+                  <span>
+                    <SecurityCompanyChip value={item.securityCompany} />
+                  </span>
                 </Tooltip>
                 <Tooltip title="증권사 수정">
                   <IconButton

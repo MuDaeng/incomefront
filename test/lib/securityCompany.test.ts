@@ -5,6 +5,7 @@ import {
   parseSecurityCompany,
   saveLastSecurityCompany,
   SECURITY_COMPANIES,
+  securityCompanyColor,
   securityCompanyLabel,
   securityCompanyShortLabel,
   securityDetailPath,
@@ -102,5 +103,15 @@ describe('securityCompany', () => {
         ),
       ).toBe('NH 2.5 · 토스 3');
     });
+  });
+});
+
+describe('securityCompanyColor', () => {
+  it('gives every broker a distinct hex color and falls back to gray', () => {
+    const colors = SECURITY_COMPANIES.map((c) => c.color);
+    for (const c of colors) expect(c).toMatch(/^#[0-9A-F]{6}$/);
+    expect(new Set(colors).size).toBe(colors.length);
+    expect(securityCompanyColor('TOSS')).toBe('#0064FF');
+    expect(securityCompanyColor('UNKNOWN')).toBe('#9E9E9E');
   });
 });
