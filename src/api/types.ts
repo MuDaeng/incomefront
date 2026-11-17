@@ -63,6 +63,14 @@ export interface SecurityMonthlyDividendResponse {
 /** 배치 실행 상태. RUNNING으로 남아 있으면 실행 중이거나 프로세스가 중간에 죽은 것 */
 export type BatchStatus = 'RUNNING' | 'SUCCESS' | 'FAILED';
 
+/** POST /admin/domestic-daily-prices/import 응답 (202, 일회용). 적재 범위만 돌려주고 백그라운드로 실행 */
+export interface DomesticDailyPriceImportResponse {
+  /** 적재 시작일 (2020-01-01) */
+  from: string;
+  /** 적재 종료일 (한국 시간 오늘) */
+  to: string;
+}
+
 /** GET /admin/batch-histories 항목 (startedAt 최신순) */
 export interface BatchHistoryItem {
   id: number;
