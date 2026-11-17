@@ -1,6 +1,5 @@
 import {
   Box,
-  Button,
   Card,
   Chip,
   MenuItem,
@@ -19,7 +18,6 @@ import { useState } from 'react';
 import { useBatchHistories } from '../api/queries';
 import type { BatchHistoryItem, BatchStatus } from '../api/types';
 import { EmptyState, ErrorAlert, Loading, PageHeader } from '../components/common';
-import { DomesticPriceImportDialog } from '../components/DomesticPriceImportDialog';
 import { formatDateTime, formatDuration } from '../lib/format';
 
 /** 백엔드 apps/batch/src/scheduler/batch.jobs.ts의 잡 이름과 맞춘다 */
@@ -47,7 +45,6 @@ export function AdminBatchPage() {
   const [name, setName] = useState('');
   const [status, setStatus] = useState<BatchStatus | ''>('');
   const [limit, setLimit] = useState(20);
-  const [importOpen, setImportOpen] = useState(false);
   const { data, isLoading, error, refetch, isFetching } = useBatchHistories({
     name: name || undefined,
     status: status || undefined,
@@ -105,14 +102,9 @@ export function AdminBatchPage() {
                 </MenuItem>
               ))}
             </TextField>
-            {/* 일회용: 백엔드가 POST /admin/domestic-daily-prices/import를 지우면 함께 지운다 */}
-            <Button variant="outlined" color="warning" onClick={() => setImportOpen(true)}>
-              국내 시세 전체 적재 (일회용)
-            </Button>
           </Stack>
         }
       />
-      <DomesticPriceImportDialog open={importOpen} onClose={() => setImportOpen(false)} />
 
       {isLoading ? (
         <Loading />
