@@ -13,7 +13,6 @@ import type {
   DailyPriceResponse,
   DeletePurchaseRequest,
   DividendHistoryResponse,
-  DomesticDailyPriceImportResponse,
   MonthlyBalanceResponse,
   IntegratedBalanceResponse,
   PeriodReturnResponse,
@@ -252,17 +251,4 @@ export const useBatchHistories = (params: {
         signal,
       }),
     placeholderData: keepPreviousData,
-  });
-
-/**
- * [일회용] POST /admin/domestic-daily-prices/import (관리자 전용). 국내 일별 시세 2020-01-01~오늘 전체 적재를
- * 백그라운드로 시작만 하고 202 { from, to }를 바로 돌려준다. 진행·결과는 백엔드 로그에만 남고
- * 배치 이력에는 기록되지 않는다. 실행 중에 다시 부르면 409. 백엔드에서 API를 지우면 이 훅과 버튼도 지운다
- */
-export const useImportDomesticDailyPrices = () =>
-  useMutation({
-    mutationFn: () =>
-      request<DomesticDailyPriceImportResponse>('/admin/domestic-daily-prices/import', {
-        method: 'POST',
-      }),
   });
