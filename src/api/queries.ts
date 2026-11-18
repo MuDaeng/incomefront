@@ -16,6 +16,7 @@ import type {
   MonthlyBalanceResponse,
   IntegratedBalanceResponse,
   PeriodReturnResponse,
+  PriceSearchItem,
   PurchaseHistoryResponse,
   RegisterBalanceRequest,
   SecurityCompanyListResponse,
@@ -52,6 +53,8 @@ export const queryKeys = {
   /** 관리자 배치 이력 (잔고와 무관) */
   batchHistories: (name: string | undefined, status: BatchStatus | undefined, limit: number) =>
     ['admin', 'batch-histories', name ?? null, status ?? null, limit] as const,
+  /** 관리자 종목별 일별 시세 조회 이력 (잔고와 무관) */
+  priceSearches: ['admin', 'security-searches', 'price'] as const,
 };
 
 /** 통합잔고. securityCompany를 주면 그 증권사 매수분만, 없으면 전체 */
@@ -251,4 +254,12 @@ export const useBatchHistories = (params: {
         signal,
       }),
     placeholderData: keepPreviousData,
+  });
+
+/** GET /admin/security-searches/price (관리자 전용, 아니면 403). 파라미터 없이 전체를 한 번에 돌려준다 */
+export const usePriceSearches = () =>
+  useQuery({
+    queryKey: queryKeys.priceSearches,
+    queryFn: ({ signal }) =>
+      request<PriceSearchItem[]>('/admin/security-searches/price', { signal }),
   });

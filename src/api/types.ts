@@ -78,6 +78,25 @@ export interface BatchHistoryItem {
   result: string | null;
 }
 
+/**
+ * GET /admin/security-searches/price 항목 (lastSearchDate 최신순, 같으면 securityId순).
+ * 국내 종목 조회 때 KIS로 하루치 시세를 보충하며 남긴 기록
+ */
+export interface PriceSearchItem {
+  /** 키 전용 (화면에는 보여 주지 않는다) */
+  securityId: string;
+  /** 백엔드 응답에 아직 없다. 추가되면 화면에 보여 준다 */
+  symbol?: string | null;
+  /** 종목 마스터에 없으면 null */
+  name: string | null;
+  /** 일별 시세를 마지막으로 확인한 날짜 'YYYY-MM-DD' (15:30 KST 전이면 어제, 후면 오늘) */
+  lastSearchDate: string;
+  /** ISO 시각 */
+  createdAt: string;
+  /** ISO 시각 */
+  updatedAt: string;
+}
+
 /* ---------- 통합잔고 ---------- */
 /** 증권사 하나의 보유 수량 (미매도 매수분 합). 수량 있는 증권사만, enum 순서 */
 export interface CompanyAmount {

@@ -5,6 +5,7 @@ import HistoryOutlined from '@mui/icons-material/HistoryOutlined';
 import LightModeOutlined from '@mui/icons-material/LightModeOutlined';
 import Logout from '@mui/icons-material/Logout';
 import Menu from '@mui/icons-material/Menu';
+import ManageSearchOutlined from '@mui/icons-material/ManageSearchOutlined';
 import PaidOutlined from '@mui/icons-material/PaidOutlined';
 import ShowChart from '@mui/icons-material/ShowChart';
 import {
@@ -38,7 +39,10 @@ const NAV = [
 ];
 
 /** access token의 rules에 admin이 있을 때만 보이는 메뉴 (페이지 자체도 서버가 403으로 막는다) */
-const ADMIN_NAV = [{ to: '/admin/batches', label: '배치 이력', icon: <HistoryOutlined /> }];
+const ADMIN_NAV = [
+  { to: '/admin/batches', label: '배치 이력', icon: <HistoryOutlined /> },
+  { to: '/admin/price-searches', label: '시세 조회 이력', icon: <ManageSearchOutlined /> },
+];
 
 interface LayoutContext {
   /** 매수 등록 창 열기. security를 주면 추가 매수(종목 고정), securityCompany는 증권사 처음 값 */
