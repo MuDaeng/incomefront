@@ -28,6 +28,7 @@ import { ReturnsPage } from './pages/ReturnsPage';
 import { AdminBatchPage } from './pages/AdminBatchPage';
 import { AdminPriceSearchPage } from './pages/AdminPriceSearchPage';
 import { SecurityDetailPage } from './pages/SecurityDetailPage';
+import { TossImportPage } from './pages/TossImportPage';
 import { theme } from './theme';
 
 const createQueryClient = () =>
@@ -87,6 +88,7 @@ export default function App() {
                       <Route path="securities/:securityId" element={<SecurityDetailPage />} />
                       <Route path="dividends" element={<DividendsPage />} />
                       <Route path="returns" element={<ReturnsPage />} />
+                      <Route path="toss-import" element={<TossImportPage />} />
                       <Route path="admin/batches" element={<AdminBatchPage />} />
                       <Route path="admin/price-searches" element={<AdminPriceSearchPage />} />
                       <Route path="*" element={<NotFound />} />

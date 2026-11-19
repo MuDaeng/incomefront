@@ -9,6 +9,8 @@ import { request } from './client';
 import type {
   BatchHistoryItem,
   BatchStatus,
+  BulkRegisterTossRequest,
+  BulkRegisterTossResponse,
   BulkSellBalanceRequest,
   DailyPriceResponse,
   DeletePurchaseRequest,
@@ -191,6 +193,19 @@ export const useBulkSellBalance = () => {
   return useMutation({
     mutationFn: (body: BulkSellBalanceRequest) =>
       request('/balance/sale/bulk', { method: 'POST', body }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: BALANCE_KEY }),
+  });
+};
+
+/**
+ * Toss 거래내역으로 TOSS 증권사 잔고 일괄 재등록. 기존 TOSS 매수분을 모두 지우고 다시 등록하며,
+ * 매도할 보유 수량이 모자라면 400으로 전체가 롤백된다
+ */
+export const useBulkRegisterToss = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: BulkRegisterTossRequest) =>
+      request<BulkRegisterTossResponse>('/balance/toss', { method: 'POST', body }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: BALANCE_KEY }),
   });
 };

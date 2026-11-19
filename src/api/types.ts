@@ -197,6 +197,53 @@ export interface BulkSellBalanceRequest {
   saleDate: string;
 }
 
+/**
+ * Toss 거래내역 한 건 (POST /balance/toss). 금액·수량은 `currency` 통화의 부호 없는 decimal 문자열.
+ * enum 필드는 Toss가 값을 늘릴 수 있어 백엔드가 모르는 문자열도 받으므로 string
+ */
+export interface TossTransaction {
+  /** BUY · SELL · SECURITIES_TRANSFER_IN · SECURITIES_TRANSFER_OUT · DEPOSIT · DIVIDEND … */
+  transactionType: string;
+  /** KR | US */
+  marketCountry: string;
+  /** KRW | USD */
+  currency: string;
+  symbol: string | null;
+  /** STOCK | BOND | OPTION */
+  assetClass: string | null;
+  isinCode: string | null;
+  quantity: string | null;
+  filledPrice: string | null;
+  exchangeRate: string | null;
+  /** KST 결제일 'YYYY-MM-DD' */
+  settlementDate: string;
+  settled: boolean;
+  /** ISO 8601. 미결제는 null */
+  transactionTime: string | null;
+  isCancellation: boolean;
+}
+
+export interface BulkRegisterTossRequest {
+  transactionList: TossTransaction[];
+}
+
+export interface TossSkippedTransaction {
+  transactionType: string;
+  isinCode: string | null;
+  reason: string;
+}
+
+/** POST /balance/toss 결과 */
+export interface BulkRegisterTossResponse {
+  /** 삭제한 기존 TOSS 매수분(매도분 포함) 행 수 */
+  deletedCount: number;
+  /** 등록한 BUY·SECURITIES_TRANSFER_IN 거래 수 */
+  boughtCount: number;
+  /** 매도 처리한 SELL·SECURITIES_TRANSFER_OUT 거래 수 */
+  soldCount: number;
+  skipped: TossSkippedTransaction[];
+}
+
 /** 매수 기록이 있는 증권사 목록 (GET /balance/security-companies). 중복 없음, 매도분 포함, enum 순서 */
 export interface SecurityCompanyListResponse {
   securityCompanies: SecurityCompany[];

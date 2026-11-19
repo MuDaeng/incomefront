@@ -8,6 +8,7 @@ import Menu from '@mui/icons-material/Menu';
 import ManageSearchOutlined from '@mui/icons-material/ManageSearchOutlined';
 import PaidOutlined from '@mui/icons-material/PaidOutlined';
 import ShowChart from '@mui/icons-material/ShowChart';
+import UploadFileOutlined from '@mui/icons-material/UploadFileOutlined';
 import {
   AppBar,
   Box,
@@ -127,6 +128,17 @@ export function Layout() {
           }}
         >
           매수 등록
+        </Button>
+        <Button
+          fullWidth
+          variant="outlined"
+          startIcon={<UploadFileOutlined />}
+          component={NavLink}
+          to="/toss-import"
+          onClick={() => setMobileOpen(false)}
+          sx={{ mt: 1 }}
+        >
+          Toss 일괄등록
         </Button>
       </Box>
     </Box>
