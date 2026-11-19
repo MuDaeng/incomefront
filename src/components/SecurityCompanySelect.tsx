@@ -97,6 +97,8 @@ export function SecurityCompanySelect({
   width,
   inputRef,
   companies,
+  disabled,
+  helperText,
 }: {
   value: SecurityCompany | null;
   onChange: (value: SecurityCompany | null) => void;
@@ -109,6 +111,8 @@ export function SecurityCompanySelect({
   inputRef?: Ref<HTMLInputElement>;
   /** 주면 이 증권사만 옵션으로 (없으면 전체) */
   companies?: readonly SecurityCompany[];
+  disabled?: boolean;
+  helperText?: string;
 }) {
   const base = companies ? OPTIONS.filter((o) => o.value && companies.includes(o.value)) : OPTIONS;
   const options = allowAll ? [ALL_OPTION, ...base] : base;
@@ -127,6 +131,8 @@ export function SecurityCompanySelect({
         required={required}
         autoFocus={autoFocus}
         inputRef={inputRef}
+        disabled={disabled}
+        helperText={helperText}
         sx={width ? { width } : undefined}
       >
         {options.map((o) => (
@@ -148,6 +154,7 @@ export function SecurityCompanySelect({
       // 필터는 항상 값이 있으므로(전체 포함) 지우기 버튼을 숨긴다
       disableClearable={allowAll}
       autoHighlight
+      disabled={disabled}
       size={size}
       sx={width ? { width } : undefined}
       noOptionsText="일치하는 증권사가 없습니다."
@@ -158,6 +165,7 @@ export function SecurityCompanySelect({
           required={required}
           autoFocus={autoFocus}
           inputRef={inputRef}
+          helperText={helperText}
         />
       )}
     />

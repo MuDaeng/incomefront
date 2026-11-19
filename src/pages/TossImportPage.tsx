@@ -27,6 +27,8 @@ import { useBulkRegisterToss } from '../api/queries';
 import type { BulkRegisterTossResponse, Currency, TossTransaction } from '../api/types';
 import { EmptyState, KeyValue, PageHeader } from '../components/common';
 import { useNotify } from '../components/Notifier';
+import { SecurityCompanySelect } from '../components/SecurityCompanySelect';
+import type { SecurityCompany } from '../lib/securityCompany';
 import {
   FALL_COLOR,
   formatDate,
@@ -47,7 +49,11 @@ import {
   tossTransactionKind,
 } from '../lib/tossImport';
 
-const numericSx = { whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' } as const;
+/** 일괄등록을 지원하는 증권사. 지금은 백엔드에 POST /balance/toss만 있어 토스증권 고정 */
+const IMPORT_COMPANY: SecurityCompany = 'TOSS';
+const IMPORT_COMPANIES: readonly SecurityCompany[] = [IMPORT_COMPANY];
+
+const numericSx ={ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' } as const;
 const ROWS_PER_PAGE = 100;
 
 type Step =
@@ -66,8 +72,8 @@ export function TossImportPage() {
   return (
     <>
       <PageHeader
-        title="Toss 일괄등록"
-        subtitle="토스증권 거래내역 JSON으로 토스증권 매수·매도 기록을 다시 등록합니다."
+        title="일괄등록"
+        subtitle="증권사 거래내역 JSON으로 매수·매도 기록을 다시 등록합니다."
       />
       {step.name === 'input' && (
         <InputStep
@@ -138,6 +144,15 @@ function InputStep({
     <Card>
       <CardContent>
         <Stack spacing={2}>
+          <SecurityCompanySelect
+            value={IMPORT_COMPANY}
+            companies={IMPORT_COMPANIES}
+            onChange={() => {}}
+            disabled
+            helperText="다른 증권사는 추후 출시 예정입니다."
+            size="small"
+            width={240}
+          />
           <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 1 }}>
             <Button
               variant="outlined"

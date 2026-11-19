@@ -138,7 +138,7 @@ export function Layout() {
           onClick={() => setMobileOpen(false)}
           sx={{ mt: 1 }}
         >
-          Toss 일괄등록
+          일괄등록
         </Button>
       </Box>
     </Box>
