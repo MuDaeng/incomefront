@@ -383,7 +383,8 @@ function PreviewStep({
         <CardContent>
           <Stack spacing={1.5}>
             <Typography variant="body2" color="text.secondary">
-              거래일은 서버 규칙(국내는 체결일, 미국은 KST 22시 이전이면 전날, 미결제는 결제일)으로 계산한 날짜입니다.
+              거래일은 결제일에서 2거래일 앞당긴 체결일입니다. 미리보기는 주말만 빼고 계산해서, 공휴일이 끼면 서버에
+              등록되는 날짜가 더 이를 수 있습니다. 매도·출고는 최근 매수분부터 차감됩니다.
               입고는 체결가가 없어 입고일 이전 최근 종가로 등록되고, 시세가 없으면 서버에서 제외됩니다.
             </Typography>
             {tooLarge && (

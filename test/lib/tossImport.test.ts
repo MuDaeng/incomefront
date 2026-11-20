@@ -89,26 +89,23 @@ describe('parseTossTransactions', () => {
 });
 
 describe('tossTradeDate', () => {
-  it('미국 거래는 KST 22시 전이면 전날', () => {
-    // 2025-01-28T23:27Z = KST 01-29 08:27
-    expect(tossTradeDate(tx())).toBe('2025-01-28');
+  it('결제일에서 평일 2일 앞당긴다 (수 → 월)', () => {
+    expect(tossTradeDate(tx())).toBe('2025-01-27');
   });
 
-  it('미국 거래는 KST 22시 이후면 그날', () => {
-    // 2025-02-24T13:30Z = KST 02-24 22:30
-    expect(tossTradeDate(tx({ transactionTime: '2025-02-24T13:30:00Z' }))).toBe('2025-02-24');
-    expect(tossTradeDate(tx({ transactionTime: '2025-02-24T22:30:00+09:00' }))).toBe('2025-02-24');
+  it('주말을 건너뛴다 (월 → 지난주 목)', () => {
+    expect(tossTradeDate(tx({ settlementDate: '2025-02-24' }))).toBe('2025-02-20');
   });
 
-  it('국내 거래는 KST 날짜', () => {
-    // 2025-02-09T15:19Z = KST 02-10 00:19
-    expect(tossTradeDate(tx({ marketCountry: 'KR', transactionTime: '2025-02-09T15:19:15.783Z' }))).toBe(
-      '2025-02-10',
-    );
+  it('결제일이 주말이면 그 전 평일부터 센다 (토 → 수)', () => {
+    expect(tossTradeDate(tx({ settlementDate: '2025-02-22' }))).toBe('2025-02-19');
   });
 
-  it('미결제는 결제일', () => {
-    expect(tossTradeDate(tx({ transactionTime: null, settlementDate: '2026-11-21' }))).toBe('2026-11-21');
+  it('시장·체결 시각·미결제 여부와 무관하다', () => {
+    expect(
+      tossTradeDate(tx({ marketCountry: 'KR', transactionTime: '2025-02-09T15:19:15.783Z', settlementDate: '2025-02-12' })),
+    ).toBe('2025-02-10');
+    expect(tossTradeDate(tx({ transactionTime: null, settlementDate: '2026-11-25' }))).toBe('2026-11-23');
   });
 });
 

@@ -83,24 +83,41 @@ export const parseTossTransactions = (text: string): ParseResult => {
   return { ok: true, transactions };
 };
 
-const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
-const DAY_MS = 24 * 60 * 60 * 1000;
+/** Toss settlementDate(결제일)는 체결일보다 이만큼 거래일 늦다 */
+const TOSS_SETTLEMENT_LAG_DAYS = 2;
+
+/** 'YYYY-MM-DD'에 days일을 더한 날짜 (UTC 날짜 계산이라 시간대 영향 없음) */
+const addIsoDays = (isoDate: string, days: number): string => {
+  const date = new Date(`${isoDate}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+};
+
+const isWeekend = (isoDate: string): boolean => {
+  const day = new Date(`${isoDate}T00:00:00Z`).getUTCDay();
+  return day === 0 || day === 6;
+};
+
+/** date(포함) 이전 가장 가까운 평일 */
+const weekdayOnOrBefore = (isoDate: string): string => {
+  let date = isoDate;
+  while (isWeekend(date)) date = addIsoDays(date, -1);
+  return date;
+};
 
 /**
- * 백엔드 toss-trade-date.ts와 같은 규칙의 매수일·매도일 (KST 'YYYY-MM-DD').
- * 미결제(transactionTime 없음)는 settlementDate, 국내는 KST 날짜,
- * 그 외(미국)는 KST 22:00 이후면 그날, 이전이면 전날
+ * Toss 거래 한 건의 체결일(매수일·매도일) 'YYYY-MM-DD' 미리보기: settlementDate에서 평일 2일 앞.
+ * 백엔드 toss-trade-date.ts(security/trading-day.ts의 krwTradingDayBefore)는 저장된 KRX 거래일로 공휴일까지
+ * 빼므로, 그 사이에 공휴일이 끼면 서버 날짜가 더 이르다. 거래일 목록이 없을 때의 서버 평일 계산과는 같다.
+ * 결제일이 잘못된 형식이면 그대로 돌려준다.
  */
-export const tossTradeDate = (
-  tx: Pick<TossTransaction, 'marketCountry' | 'transactionTime' | 'settlementDate'>,
-): string => {
-  if (tx.transactionTime === null) return tx.settlementDate;
-  const time = Date.parse(tx.transactionTime);
-  if (Number.isNaN(time)) return tx.settlementDate;
-  const kst = new Date(time + KST_OFFSET_MS);
-  const date =
-    tx.marketCountry === 'KR' || kst.getUTCHours() >= 22 ? kst : new Date(kst.getTime() - DAY_MS);
-  return date.toISOString().slice(0, 10);
+export const tossTradeDate = (tx: Pick<TossTransaction, 'settlementDate'>): string => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(tx.settlementDate)) return tx.settlementDate;
+  let date = weekdayOnOrBefore(tx.settlementDate);
+  for (let i = 0; i < TOSS_SETTLEMENT_LAG_DAYS; i++) {
+    date = weekdayOnOrBefore(addIsoDays(date, -1));
+  }
+  return date;
 };
 
 export const tossTransactionKind = (tx: Pick<TossTransaction, 'transactionType'>): TossKind => {

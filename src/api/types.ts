@@ -189,7 +189,7 @@ export interface SellBalanceRequest {
   saleDate: string;
 }
 
-/** 증권사별 일괄매도 (POST /balance/sale/bulk 본문). 그 증권사의 미매도 매수분 중 saleDate 이전(당일 포함) 매수분을 오래된 순으로 amount만큼 매도 */
+/** 증권사별 일괄매도 (POST /balance/sale/bulk 본문). 그 증권사의 미매도 매수분 중 saleDate 이전(당일 포함) 매수분을 최근 순(LIFO)으로 amount만큼 매도 */
 export interface BulkSellBalanceRequest {
   securityId: string;
   securityCompany: SecurityCompany;

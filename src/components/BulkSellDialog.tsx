@@ -20,7 +20,7 @@ import { KeyValue } from './common';
 import { useNotify } from './Notifier';
 import { SecurityCompanySelect } from './SecurityCompanySelect';
 
-/** 증권사별 일괄매도: 고른 증권사의 미매도 매수분을 매수일이 오래된 순으로 수량만큼 매도 */
+/** 증권사별 일괄매도: 고른 증권사의 미매도 매수분을 매수일이 최근인 순으로 수량만큼 매도 (LIFO) */
 export function BulkSellDialog({
   open,
   security,
@@ -131,7 +131,7 @@ function BulkSellForm({
                 ? '매도 수량이 이 증권사의 보유 수량보다 많습니다.'
                 : amountError
                   ? '0보다 큰 숫자를 입력하세요.'
-                  : '매수일이 오래된 매수분부터 차례로 매도합니다.'
+                  : '매수일이 최근인 매수분부터 차례로 매도합니다.'
             }
             slotProps={{
               htmlInput: { inputMode: 'decimal' },
