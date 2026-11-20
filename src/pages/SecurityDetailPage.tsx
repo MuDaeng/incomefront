@@ -25,10 +25,11 @@ import {
 } from '@mui/material';
 import { BarChart } from '@mui/x-charts/BarChart';
 import dayjs from 'dayjs';
-import { useMemo, useState } from 'react';
+import { type ReactNode, useMemo, useState } from 'react';
 import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
 import {
   useDailyPrices,
+  useDividendMetrics,
   usePurchases,
   useSecurityCompanies,
   useSecurityDividends,
@@ -60,14 +61,18 @@ import { KRW_COLOR, USD_COLOR } from '../lib/chart';
 import { fillDividendMonths, monthTickLabel, trailingYearDividend } from '../lib/dividends';
 import {
   filterCompanyOptions,
+  type SecurityCompany,
   securityCompanyLabel,
 } from '../lib/securityCompany';
+import { findMetricsItem } from '../lib/dividendMetrics';
 import { useSecurityCompanyParam } from '../lib/useSecurityCompanyParam';
 import {
   formatDate,
   formatExchangeRate,
   formatMoney,
+  formatKrw,
   formatMonth,
+  formatPercent,
   formatPrice,
   formatQuantity,
   formatRate,
@@ -195,7 +200,7 @@ export function SecurityDetailPage() {
 
       <PriceChartCard security={security} average={stats.average} />
 
-      <DividendHistoryCard security={security} />
+      <DividendHistoryCard security={security} securityCompany={securityCompany} />
 
       <Card sx={{ mt: 2 }}>
         <CardHeader
@@ -404,8 +409,17 @@ const INTERVALS: { key: CandleInterval; label: string }[] = [
 /** 차트에 그리는 최대 개월 수 (KRW 배당은 2020년부터 쌓인다) */
 const DIVIDEND_CHART_MONTHS = 36;
 
-function DividendHistoryCard({ security }: { security: SecurityInfo }) {
+function DividendHistoryCard({
+  security,
+  securityCompany,
+}: {
+  security: SecurityInfo;
+  securityCompany?: SecurityCompany;
+}) {
   const { data, isLoading, error } = useSecurityDividends(security.id);
+  // 보유 기준 지표 (현재 보유하지 않으면 없음)
+  const { data: metricsData } = useDividendMetrics(securityCompany);
+  const metrics = findMetricsItem(metricsData, security.id);
   const months = useMemo(() => data?.months ?? [], [data]);
   const chartMonths = useMemo(() => fillDividendMonths(months, DIVIDEND_CHART_MONTHS), [months]);
   const trailing = useMemo(
@@ -425,6 +439,38 @@ function DividendHistoryCard({ security }: { security: SecurityInfo }) {
         }
       />
       <CardContent sx={{ pt: 0 }}>
+        {metrics && (
+          <Grid container spacing={1.5} sx={{ mb: 2 }}>
+            <Grid size={{ xs: 6, md: 3 }}>
+              <MetricBox
+                label="예상 연배당 (세전)"
+                value={formatKrw(metrics.krwAnnualDividend)}
+                sub={
+                  security.currency === 'USD'
+                    ? formatMoney(metrics.annualDividend, security.currency)
+                    : `월 ${formatKrw(toNumber(metrics.krwAnnualDividend) / 12)}`
+                }
+              />
+            </Grid>
+            <Grid size={{ xs: 6, md: 3 }}>
+              <MetricBox label="매입가 대비 (YOC)" value={formatPercent(metrics.yieldOnCost)} />
+            </Grid>
+            <Grid size={{ xs: 6, md: 3 }}>
+              <MetricBox
+                label="현재 배당률"
+                value={formatPercent(metrics.currentYield)}
+                sub={metrics.closingPrice ? `종가 ${formatPrice(metrics.closingPrice, security.currency)}` : undefined}
+              />
+            </Grid>
+            <Grid size={{ xs: 6, md: 3 }}>
+              <MetricBox
+                label="배당 성장률 (전년 12개월 대비)"
+                value={<ProfitText value={metrics.growthRate} variant="h6" fontWeight={700} />}
+                sub={`직전 12개월 ${formatPrice(metrics.previousPerShare, security.currency)}`}
+              />
+            </Grid>
+          </Grid>
+        )}
         {isLoading ? (
           <Loading minHeight={240} />
         ) : error ? (
@@ -462,6 +508,24 @@ function DividendHistoryCard({ security }: { security: SecurityInfo }) {
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function MetricBox({ label, value, sub }: { label: string; value: ReactNode; sub?: string }) {
+  return (
+    <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: 'action.hover', height: '100%' }}>
+      <Typography variant="caption" color="text.secondary">
+        {label}
+      </Typography>
+      <Typography variant="h6" sx={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
+        {value}
+      </Typography>
+      {sub && (
+        <Typography variant="caption" color="text.secondary">
+          {sub}
+        </Typography>
+      )}
+    </Box>
   );
 }
 

@@ -314,7 +314,10 @@ export interface DividendItem {
   securityId: string;
   name: string;
   currency: Currency;
+  /** 배당 기준일 */
   noticeDate: string;
+  /** 배당락일. 전날까지 매수, 이 날 이후(당일 포함) 매도한 수량으로 계산. 예전에 저장된 배당은 null(기준일 보유로 계산) */
+  exDividendDate?: string | null;
   paymentDate: string;
   perShareAmount: string;
   quantity: string;
@@ -336,6 +339,55 @@ export interface MonthlyDividend {
   month: string;
   summary: DividendSummary;
   items: DividendItem[];
+}
+
+/** GET /balance/dividend-metrics 종목별 배당 지표 (세전). 비율은 % 소수 2자리 */
+export interface DividendMetricsItem {
+  securityId: string;
+  symbol: string;
+  name: string;
+  currency: Currency;
+  /** 현재 보유 수량 */
+  quantity: string;
+  /** 최근 12개월 지급된 주당 현금배당 합 (종목 통화) */
+  trailingPerShare: string;
+  /** 최근 12개월 지급 횟수 */
+  paymentCount: number;
+  /** 그 직전 12개월 주당 배당 합 (종목 통화) */
+  previousPerShare: string;
+  /** 배당 성장률(%) = 최근 12개월 ÷ 직전 12개월 − 1. 직전 배당이 없으면 null */
+  growthRate: string | null;
+  /** 예상 연배당 (종목 통화) = 최근 12개월 주당 배당 × 현재 수량 */
+  annualDividend: string;
+  /** 예상 연배당 (원화, USD는 최신 환율) */
+  krwAnnualDividend: string;
+  /** 현재 보유분 원금 (원화) */
+  krwPurchaseAmount: string;
+  closingPrice: string | null;
+  priceDate: string | null;
+  krwEvaluationAmount: string | null;
+  /** 매입가 대비 배당률(%) */
+  yieldOnCost: string | null;
+  /** 현재 배당률(%) = 최근 12개월 주당 배당 ÷ 최신 종가 */
+  currentYield: string | null;
+}
+
+export interface DividendMetricsTotal {
+  krwAnnualDividend: string;
+  krwPurchaseAmount: string;
+  krwEvaluationAmount: string;
+  yieldOnCost: string | null;
+  currentYield: string | null;
+}
+
+export interface DividendMetricsResponse {
+  /** 기준일 (한국 시간 오늘) */
+  date: string;
+  exchangeRate: string | null;
+  exchangeRateDate: string | null;
+  /** 현재 보유 종목, 종목 코드 순 */
+  items: DividendMetricsItem[];
+  total: DividendMetricsTotal;
 }
 
 export interface DividendHistoryResponse {

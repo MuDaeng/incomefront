@@ -37,6 +37,7 @@ import {
   StatCard,
 } from '../components/common';
 import { DateRange, DateRangeBar, PRESETS } from '../components/DateRangeBar';
+import { DividendMetricsSection } from '../components/DividendMetricsSection';
 import { CurrencyChip } from '../components/SecuritySearch';
 import { KRW_COLOR, USD_COLOR } from '../lib/chart';
 import {
@@ -117,7 +118,7 @@ export function DividendsPage() {
     <>
       <PageHeader
         title="배당금"
-        subtitle="배당 기준일 보유 수량 × 주당 배당금 · 미국 배당은 지급일 환율로 원화 환산"
+        subtitle="배당락일 전날 보유 수량 × 주당 배당금 (세전) · 미국 배당은 지급일 환율로 원화 환산"
         action={
           <SecurityCompanySelect
             allowAll
@@ -231,6 +232,8 @@ export function DividendsPage() {
           )}
         </>
       ) : null}
+
+      <DividendMetricsSection securityCompany={securityCompany} />
     </>
   );
 }
@@ -281,6 +284,7 @@ function MonthAccordion({
               <TableRow>
                 <TableCell>지급일</TableCell>
                 <TableCell>종목</TableCell>
+                <TableCell>배당락일</TableCell>
                 <TableCell>기준일</TableCell>
                 <TableCell align="right">주당 배당금</TableCell>
                 <TableCell align="right">보유 수량</TableCell>
@@ -315,6 +319,15 @@ function DividendRow({ item, today }: { item: DividendItem; today: string }) {
             {item.name}
           </Typography>
         </Stack>
+      </TableCell>
+      <TableCell>
+        {item.exDividendDate ? (
+          formatDate(item.exDividendDate)
+        ) : (
+          <Tooltip title="배당락일이 아직 저장되지 않은 배당이에요. 기준일 보유 수량으로 계산했어요.">
+            <span>-</span>
+          </Tooltip>
+        )}
       </TableCell>
       <TableCell>{formatDate(item.noticeDate)}</TableCell>
       <TableCell align="right">{formatPrice(item.perShareAmount, item.currency)}</TableCell>

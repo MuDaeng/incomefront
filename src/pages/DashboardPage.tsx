@@ -20,7 +20,7 @@ import {
 import { PieChart } from '@mui/x-charts/PieChart';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useIntegratedBalance, useSecurityCompanies } from '../api/queries';
+import { useDividendMetrics, useIntegratedBalance, useSecurityCompanies } from '../api/queries';
 import type { BalanceItem } from '../api/types';
 import {
   EmptyState,
@@ -38,6 +38,7 @@ import {
   formatDate,
   formatExchangeRate,
   formatKrw,
+  formatPercent,
   formatPrice,
   formatQuantity,
   formatSignedKrw,
@@ -53,6 +54,7 @@ import {
   filterCompanyOptions,
 } from '../lib/securityCompany';
 import { useSecurityCompanyParam } from '../lib/useSecurityCompanyParam';
+import { monthlyAverage } from '../lib/dividendMetrics';
 
 type Filter = 'ALL' | 'KRW' | 'USD';
 
@@ -61,6 +63,8 @@ export function DashboardPage() {
   // 증권사 필터는 URL 쿼리(?securityCompany=)에 둔다: 새로고침·뒤로 가기에도 유지
   const [securityCompany, setSecurityCompany] = useSecurityCompanyParam();
   const { data, isLoading, error, refetch } = useIntegratedBalance(securityCompany);
+  // 배당 지표는 잔고와 따로 불러온다 (배당 원천 갱신 때문에 느릴 수 있어 잔고 화면을 막지 않는다)
+  const { data: dividendMetrics } = useDividendMetrics(securityCompany);
   // 필터 목록은 매수 기록이 있는 증권사만
   const { data: companies } = useSecurityCompanies();
   const [filter, setFilter] = useState<Filter>('ALL');
@@ -137,7 +141,7 @@ export function DashboardPage() {
       />
 
       <Grid container spacing={2} sx={{ mb: 2 }}>
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
             highlight
             label="총 평가금액"
@@ -150,7 +154,7 @@ export function DashboardPage() {
             footer={<KeyValue label="총 매입금액" value={formatKrw(total.purchaseAmount)} />}
           />
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
             label="국내 주식"
             value={formatKrw(krwTotal.evaluationAmount)}
@@ -162,7 +166,7 @@ export function DashboardPage() {
             footer={<KeyValue label="매입금액" value={formatKrw(krwTotal.purchaseAmount)} />}
           />
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
             label="미국 주식"
             value={formatKrw(usdTotal.krwEvaluationAmount)}
@@ -183,6 +187,31 @@ export function DashboardPage() {
                   }
                 />
                 <KeyValue label="매입금액(원화 환산)" value={formatKrw(usdTotal.krwPurchaseAmount)} />
+              </>
+            }
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <StatCard
+            label="예상 연배당 (세전)"
+            value={dividendMetrics ? formatKrw(dividendMetrics.total.krwAnnualDividend) : '-'}
+            sub={
+              dividendMetrics && (
+                <Typography variant="body2" color="text.secondary">
+                  월 {formatKrw(monthlyAverage(dividendMetrics.total.krwAnnualDividend))}
+                </Typography>
+              )
+            }
+            footer={
+              <>
+                <KeyValue
+                  label="매입가 대비 (YOC)"
+                  value={formatPercent(dividendMetrics?.total.yieldOnCost)}
+                />
+                <KeyValue
+                  label="현재 배당률"
+                  value={formatPercent(dividendMetrics?.total.currentYield)}
+                />
               </>
             }
           />

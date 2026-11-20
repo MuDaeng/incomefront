@@ -67,6 +67,12 @@ export const formatRate = (value: Value): string => {
   return Number.isNaN(n) ? EMPTY : `${signOf(n)}${n.toFixed(2)}%`;
 };
 
+/** 부호 없는 비율(%): 배당률·YOC 등. 3.25% */
+export const formatPercent = (value: Value): string => {
+  const n = toNumber(value);
+  return Number.isNaN(n) ? EMPTY : `${n.toFixed(2)}%`;
+};
+
 /** 부호 붙은 원화: +12,345원 */
 export const formatSignedKrw = (value: Value): string => {
   const n = toNumber(value);

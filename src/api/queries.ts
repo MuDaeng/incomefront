@@ -15,6 +15,7 @@ import type {
   DailyPriceResponse,
   DeletePurchaseRequest,
   DividendHistoryResponse,
+  DividendMetricsResponse,
   MonthlyBalanceResponse,
   IntegratedBalanceResponse,
   PeriodReturnResponse,
@@ -46,6 +47,8 @@ export const queryKeys = {
     [...BALANCE_KEY, 'returns', from, to, securityCompany ?? null] as const,
   monthly: (from: string, to: string, securityCompany?: SecurityCompany) =>
     [...BALANCE_KEY, 'monthly', from, to, securityCompany ?? null] as const,
+  dividendMetrics: (securityCompany?: SecurityCompany) =>
+    [...BALANCE_KEY, 'dividend-metrics', securityCompany ?? null] as const,
   securityCompanies: [...BALANCE_KEY, 'security-companies'] as const,
   securitySearch: (keyword: string) => ['securities', keyword] as const,
   dailyPrices: (securityId: string, from?: string, to?: string) =>
@@ -92,6 +95,18 @@ export const useDividendHistory = (from?: string, to?: string, securityCompany?:
     queryFn: ({ signal }) =>
       request<DividendHistoryResponse>('/balance/dividends', {
         query: { from, to, securityCompany },
+        signal,
+      }),
+    placeholderData: keepPreviousData,
+  });
+
+/** 현재 보유 종목의 배당 지표(예상 연배당·YOC·현재 배당률·성장률, 세전). securityCompany를 주면 그 증권사 보유분만 */
+export const useDividendMetrics = (securityCompany?: SecurityCompany) =>
+  useQuery({
+    queryKey: queryKeys.dividendMetrics(securityCompany),
+    queryFn: ({ signal }) =>
+      request<DividendMetricsResponse>('/balance/dividend-metrics', {
+        query: { securityCompany },
         signal,
       }),
     placeholderData: keepPreviousData,
