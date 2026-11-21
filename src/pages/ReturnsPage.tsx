@@ -33,6 +33,7 @@ import { DateRange, DateRangeBar, PRESETS } from '../components/DateRangeBar';
 import { MonthlyTrendSection } from '../components/MonthlyTrendSection';
 import { AccountSelect } from '../components/AccountSelect';
 import { useAccountParam } from '../lib/useAccountParam';
+import { useTaxMode } from '../lib/useTaxMode';
 import { CurrencyChip } from '../components/SecuritySearch';
 import { TaxModeToggle } from '../components/TaxModeToggle';
 import { KRW_COLOR, USD_COLOR } from '../lib/chart';
@@ -66,7 +67,7 @@ export function ReturnsPage() {
   const from = range.from!;
   const to = range.to!;
   const [accountId, setAccountId] = useAccountParam();
-  const [taxMode, setTaxMode] = useState<TaxMode>('pre');
+  const [taxMode, setTaxMode] = useTaxMode();
   const { data: accounts } = useAccounts();
   const { data, isLoading, isFetching, error, refetch } = usePeriodReturn(from, to, accountId);
 

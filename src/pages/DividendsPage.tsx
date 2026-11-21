@@ -26,6 +26,7 @@ import { useMemo, useState } from 'react';
 import { useDividendHistory, useAccounts } from '../api/queries';
 import { AccountSelect } from '../components/AccountSelect';
 import { useAccountParam } from '../lib/useAccountParam';
+import { useTaxMode } from '../lib/useTaxMode';
 import type { DividendItem, MonthlyDividend } from '../api/types';
 import {
   EmptyState,
@@ -87,7 +88,7 @@ export function DividendsPage() {
   const [presetKey, setPresetKey] = useState<string | null>(PRESETS.thisYear.key);
   const [range, setRange] = useState<DateRange>(PRESETS.thisYear.range);
   const [accountId, setAccountId] = useAccountParam();
-  const [taxMode, setTaxMode] = useState<TaxMode>('pre');
+  const [taxMode, setTaxMode] = useTaxMode();
   const { data: accounts } = useAccounts();
   const { data, isLoading, isFetching, error, refetch } = useDividendHistory(
     range.from,

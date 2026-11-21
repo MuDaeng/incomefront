@@ -4,6 +4,8 @@ import {
   dividendSumView,
   dividendSummaryView,
   krwTaxAmount,
+  loadTaxMode,
+  saveTaxMode,
   totalReturnView,
 } from '../../src/lib/dividendTax';
 
@@ -81,5 +83,18 @@ describe('dividendTax', () => {
     const sum = { usdAmount: '2.000000', krwAmount: '2700', afterTaxUsdAmount: '1.700000', afterTaxKrwAmount: '2295' };
     expect(dividendSumView(sum, 'after')).toEqual({ usdAmount: '1.700000', krwAmount: '2295' });
     expect(dividendSumView(sum, 'pre')).toEqual({ usdAmount: '2.000000', krwAmount: '2700' });
+  });
+});
+
+describe('세전/세후 선택 저장', () => {
+  it('저장한 값을 읽고, 없거나 잘못된 값이면 세전', () => {
+    localStorage.clear();
+    expect(loadTaxMode()).toBe('pre');
+    saveTaxMode('after');
+    expect(loadTaxMode()).toBe('after');
+    saveTaxMode('pre');
+    expect(loadTaxMode()).toBe('pre');
+    localStorage.setItem('income.taxMode', 'nope');
+    expect(loadTaxMode()).toBe('pre');
   });
 });

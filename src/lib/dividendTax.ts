@@ -15,6 +15,26 @@ export type TaxMode = 'pre' | 'after';
 
 export const TAX_MODE_LABEL: Record<TaxMode, string> = { pre: '세전', after: '세후' };
 
+/** 마지막으로 고른 세전/세후 (배당금·기간 수익률 페이지 공유, 브라우저별 편의 기능) */
+const TAX_MODE_KEY = 'income.taxMode';
+
+/** 저장된 값이 없거나 잘못됐거나 저장소를 못 쓰면 세전 */
+export function loadTaxMode(): TaxMode {
+  try {
+    return localStorage.getItem(TAX_MODE_KEY) === 'after' ? 'after' : 'pre';
+  } catch {
+    return 'pre';
+  }
+}
+
+export function saveTaxMode(mode: TaxMode): void {
+  try {
+    localStorage.setItem(TAX_MODE_KEY, mode);
+  } catch {
+    /* 저장소 사용 불가 환경은 무시 */
+  }
+}
+
 /** 배당 합계(월별·기간) 중 선택한 기준의 금액 */
 export const dividendSummaryView = (s: DividendSummary, mode: TaxMode) =>
   mode === 'after'
