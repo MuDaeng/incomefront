@@ -450,11 +450,21 @@ export interface DividendMetricsResponse {
   total: DividendMetricsTotal;
 }
 
+/** 지급 예정 배당 (지급일이 오늘(한국 시간) 이후, 기간 안). total·months에는 들어가지 않는다 */
+export interface ScheduledDividends {
+  total: DividendSummary;
+  /** 지급일·종목 순 */
+  items: DividendItem[];
+}
+
 export interface DividendHistoryResponse {
   from: string | null;
   to: string | null;
+  /** 기간 총배당금 (지급일이 오늘 이하인 지급분만) */
   total: DividendSummary;
+  /** 월별 배당 내역 (월 오름차순, 지급분만) */
   months: MonthlyDividend[];
+  scheduled: ScheduledDividends;
 }
 
 /* ---------- 기간 수익률 ---------- */

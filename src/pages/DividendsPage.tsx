@@ -114,23 +114,15 @@ export function DividendsPage() {
   }, [data, range.from, range.to, taxMode]);
 
   const today = dayjs().format('YYYY-MM-DD');
-  const upcoming = useMemo(
-    () =>
-      (data?.months ?? [])
-        .flatMap((m) => m.items)
-        .filter((i) => i.paymentDate > today)
-        .reduce((s, i) => s + toNumber(dividendItemView(i, taxMode).krwAmount ?? 0), 0),
-    [data, today, taxMode],
-  );
-
   const monthCount = chartMonths.length || 1;
   const total = data ? dividendSummaryView(data.total, taxMode) : undefined;
+  const scheduled = data ? dividendSummaryView(data.scheduled.total, taxMode) : undefined;
 
   return (
     <>
       <PageHeader
         title="배당금"
-        subtitle={`배당락일 전날 보유 수량 × 주당 배당금 (${TAX_MODE_LABEL[taxMode]}) · 미국 배당은 지급일 환율로 원화 환산`}
+        subtitle={`배당락일 전날 보유 수량 × 주당 배당금 (${TAX_MODE_LABEL[taxMode]}) · 미국 배당은 지급일 환율로 원화 환산 · 지급 예정 배당은 따로 표시`}
         action={
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
             <TaxModeToggle value={taxMode} onChange={setTaxMode} />
@@ -160,7 +152,7 @@ export function DividendsPage() {
         <Loading />
       ) : error ? (
         <ErrorAlert error={error} onRetry={() => refetch()} />
-      ) : data && total ? (
+      ) : data && total && scheduled ? (
         <>
           <Grid container spacing={2} sx={{ mb: 2 }}>
             <Grid size={{ xs: 12, md: 4 }}>
@@ -177,6 +169,7 @@ export function DividendsPage() {
                     {taxMode === 'after' && (
                       <KeyValue label="세금 (원화 환산)" value={formatKrw(krwTaxAmount(data.total))} />
                     )}
+                    <KeyValue label="지급 예정 (원화 환산)" value={formatKrw(scheduled.totalKrwAmount)} />
                   </>
                 }
               />
@@ -185,7 +178,7 @@ export function DividendsPage() {
               <StatCard
                 label="국내 배당금"
                 value={formatKrw(total.krwAmount)}
-                footer={<KeyValue label="지급 예정 포함 (원화 환산)" value={formatKrw(upcoming)} />}
+                footer={<KeyValue label="지급 예정" value={formatKrw(scheduled.krwAmount)} />}
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 6, md: 4 }}>
@@ -197,13 +190,41 @@ export function DividendsPage() {
             </Grid>
           </Grid>
 
-          {data.months.length === 0 ? (
-            <Card>
-              <EmptyState
-                title="이 기간에 받은 배당금이 없어요"
-                description="기간을 바꾸거나 배당 종목의 매수 내역을 등록해 보세요."
+          {data.scheduled.items.length > 0 && (
+            <Card sx={{ mb: 2 }}>
+              <CardHeader
+                title={`지급 예정 ${data.scheduled.items.length}건 · ${formatKrw(scheduled.totalKrwAmount)}`}
+                subheader="지급일이 오늘 이후인 배당 (총 배당금·월별 내역에는 들어가지 않아요)"
+                slotProps={{ title: { variant: 'h6' } }}
               />
+              <TableContainer>
+                <Table size="small">
+                  <DividendTableHead taxMode={taxMode} />
+                  <TableBody>
+                    {data.scheduled.items.map((item) => (
+                      <DividendRow
+                        key={`${item.securityId}-${item.noticeDate}-${item.paymentDate}`}
+                        item={item}
+                        today={today}
+                        taxMode={taxMode}
+                      />
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
             </Card>
+          )}
+
+          {data.months.length === 0 ? (
+            // 지급분이 없어도 지급 예정 배당이 있으면 위 카드만 보여준다
+            data.scheduled.items.length === 0 && (
+              <Card>
+                <EmptyState
+                  title="이 기간에 받은 배당금이 없어요"
+                  description="기간을 바꾸거나 배당 종목의 매수 내역을 등록해 보세요."
+                />
+              </Card>
+            )
           ) : (
             <>
               <Card sx={{ mb: 2 }}>
@@ -309,19 +330,7 @@ function MonthAccordion({
       <AccordionDetails sx={{ p: 0 }}>
         <TableContainer>
           <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>지급일</TableCell>
-                <TableCell>종목</TableCell>
-                <TableCell>배당락일</TableCell>
-                <TableCell>기준일</TableCell>
-                <TableCell align="right">주당 배당금</TableCell>
-                <TableCell align="right">보유 수량</TableCell>
-                {taxMode === 'after' && <TableCell align="right">세금</TableCell>}
-                <TableCell align="right">{taxMode === 'after' ? '세후 배당금' : '배당금'}</TableCell>
-                <TableCell align="right">원화 환산</TableCell>
-              </TableRow>
-            </TableHead>
+            <DividendTableHead taxMode={taxMode} />
             <TableBody>
               {month.items.map((item) => (
                 <DividendRow key={`${item.securityId}-${item.noticeDate}-${item.paymentDate}`} item={item} today={today} taxMode={taxMode} />
@@ -331,6 +340,24 @@ function MonthAccordion({
         </TableContainer>
       </AccordionDetails>
     </Accordion>
+  );
+}
+
+function DividendTableHead({ taxMode }: { taxMode: TaxMode }) {
+  return (
+    <TableHead>
+      <TableRow>
+        <TableCell>지급일</TableCell>
+        <TableCell>종목</TableCell>
+        <TableCell>배당락일</TableCell>
+        <TableCell>기준일</TableCell>
+        <TableCell align="right">주당 배당금</TableCell>
+        <TableCell align="right">보유 수량</TableCell>
+        {taxMode === 'after' && <TableCell align="right">세금</TableCell>}
+        <TableCell align="right">{taxMode === 'after' ? '세후 배당금' : '배당금'}</TableCell>
+        <TableCell align="right">원화 환산</TableCell>
+      </TableRow>
+    </TableHead>
   );
 }
 

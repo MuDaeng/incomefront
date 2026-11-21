@@ -64,7 +64,7 @@ Google login is a full-page redirect to `${API_URL}/auth/google`. The backend re
 ## Backend contract notes
 
 - The backend's CORS origin is its `FRONTEND_URL` env var. It must be `http://localhost:3000` for local login and cookies to work.
-- `/balance/returns` requires both `from` and `to`. `/balance/dividends` accepts either or neither; omitting `to` includes upcoming payments.
+- `/balance/returns` requires both `from` and `to`. `/balance/dividends` accepts either or neither. Its `months`/`total` hold only dividends paid by today (KST); ones paid after today come separately in `scheduled: { total, items }` (same summary/item shape, payment-date order), so `/balance/returns` and `/balance/monthly` never count unpaid dividends. The 배당금 page shows `scheduled` as a "지급 예정" card above 월별 내역 and in the card footers.
 - Selling a purchase lot is identified by `(securityId, purchaseDate, sequence)`, taken from `/balance/purchases`.
 - `POST /balance` takes an optional `exchangeRate` (KRW per USD; ignored for KRW). Omitted → the backend stores the purchase-date USD rate. There is no GET endpoint for exchange rates, so the register dialog leaves the field empty instead of pre-filling it. `/balance/purchases` returns the stored rate with `exchangeRateDate: null`, or the fallback rate with its date; its `price` is already cut to 2 decimals (`ROUND_DOWN`).
 - `PATCH /balance/purchases` (body `{ securityId, purchaseDate, sequence, exchangeRate }`) changes one lot's stored purchase exchange rate, sold lots too (`useUpdateExchangeRate`, `EditExchangeRateDialog` on the detail page). `exchangeRate: null` clears it so queries fall back to the purchase-date rate; the key is required (omitting it is 400) and KRW securities are 400.
