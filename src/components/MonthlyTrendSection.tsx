@@ -65,7 +65,7 @@ export function MonthlyTrendSection({
         `${dotMonth(range.from)} ~ ${dotMonth(range.to)}`,
         range.cappedToCurrentMonth && '(이번 달까지)',
         range.cappedToMaxMonths && `(최근 ${MAX_MONTHS}개월)`,
-        '· 매월 말 기준, 누적배당금 포함',
+        '· 매월 말 기준, 누적배당금(세전) 포함',
       ]
         .filter(Boolean)
         .join(' ')

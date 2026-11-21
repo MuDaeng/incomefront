@@ -372,6 +372,14 @@ export interface DividendItem {
   amount: string;
   usdAmount: string | null;
   krwAmount: string | null;
+  /** 세금 (종목 통화). 일반 계좌 매수분에만 KRW 15.4%·USD 15%, ISA·IRP·연금저축은 0 */
+  taxAmount: string;
+  /** 세후 배당금 (종목 통화) = amount − taxAmount */
+  afterTaxAmount: string;
+  /** 세후 달러 배당금 (KRW 종목은 null) */
+  afterTaxUsdAmount: string | null;
+  /** 세후 원화 배당금 (USD는 지급일 환율 환산, 환율이 없으면 null) */
+  afterTaxKrwAmount: string | null;
   exchangeRate: string | null;
   exchangeRateDate: string | null;
 }
@@ -381,6 +389,10 @@ export interface DividendSummary {
   usdAmount: string;
   usdKrwAmount: string;
   totalKrwAmount: string;
+  afterTaxKrwAmount: string;
+  afterTaxUsdAmount: string;
+  afterTaxUsdKrwAmount: string;
+  afterTaxTotalKrwAmount: string;
 }
 
 export interface MonthlyDividend {
@@ -474,9 +486,29 @@ export interface DividendSumItem {
   currency: Currency;
   usdAmount: string | null;
   krwAmount: string;
+  /** 기간 세후 달러 배당금 (KRW 종목은 null) */
+  afterTaxUsdAmount: string | null;
+  /** 기간 세후 원화 배당금 (일반 계좌만 과세) */
+  afterTaxKrwAmount: string;
 }
 
-export interface TotalReturnItem {
+export interface DividendSumSummary {
+  usdAmount: string;
+  krwAmount: string;
+  afterTaxUsdAmount: string;
+  afterTaxKrwAmount: string;
+}
+
+/** 세후 필드: 평가금액은 같고 배당만 세후 */
+export interface AfterTaxReturnFields {
+  afterTaxDividendAmount: string;
+  /** 평가금액 + 세후 배당금 */
+  afterTaxTotalAmount: string;
+  afterTaxProfit: string;
+  afterTaxReturnRate: string;
+}
+
+export interface TotalReturnItem extends AfterTaxReturnFields {
   securityId: string;
   name: string;
   purchaseAmount: string;
@@ -487,7 +519,7 @@ export interface TotalReturnItem {
   returnRate: string;
 }
 
-export interface TotalReturnSummary {
+export interface TotalReturnSummary extends AfterTaxReturnFields {
   purchaseAmount: string;
   evaluationAmount: string;
   dividendAmount: string;
@@ -504,7 +536,7 @@ export interface PeriodReturnResponse {
   evaluation: { items: EvaluationItem[]; total: EvaluationSummary };
   dividend: {
     items: DividendSumItem[];
-    total: { usdAmount: string; krwAmount: string };
+    total: DividendSumSummary;
   };
   total: { items: TotalReturnItem[]; total: TotalReturnSummary };
 }

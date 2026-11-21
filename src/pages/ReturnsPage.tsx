@@ -34,7 +34,9 @@ import { MonthlyTrendSection } from '../components/MonthlyTrendSection';
 import { AccountSelect } from '../components/AccountSelect';
 import { useAccountParam } from '../lib/useAccountParam';
 import { CurrencyChip } from '../components/SecuritySearch';
+import { TaxModeToggle } from '../components/TaxModeToggle';
 import { KRW_COLOR, USD_COLOR } from '../lib/chart';
+import { dividendSumView, TAX_MODE_LABEL, type TaxMode, totalReturnView } from '../lib/dividendTax';
 import {
   formatDate,
   formatExchangeRate,
@@ -64,6 +66,7 @@ export function ReturnsPage() {
   const from = range.from!;
   const to = range.to!;
   const [accountId, setAccountId] = useAccountParam();
+  const [taxMode, setTaxMode] = useState<TaxMode>('pre');
   const { data: accounts } = useAccounts();
   const { data, isLoading, isFetching, error, refetch } = usePeriodReturn(from, to, accountId);
 
@@ -71,16 +74,19 @@ export function ReturnsPage() {
     <>
       <PageHeader
         title="기간 수익률"
-        subtitle="종료일 보유분 평가손익 + 기간 중 받은 배당금 = 원금 대비 총수익"
+        subtitle={`종료일 보유분 평가손익 + 기간 중 받은 배당금(${TAX_MODE_LABEL[taxMode]}) = 원금 대비 총수익`}
         action={
-          <AccountSelect
-            allowAll
-            size="small"
-            width={210}
-            value={accountId ?? null}
-            onChange={setAccountId}
-            accounts={accounts}
-          />
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+            <TaxModeToggle value={taxMode} onChange={setTaxMode} />
+            <AccountSelect
+              allowAll
+              size="small"
+              width={210}
+              value={accountId ?? null}
+              onChange={setAccountId}
+              accounts={accounts}
+            />
+          </Stack>
         }
       />
       <DateRangeBar
@@ -99,7 +105,7 @@ export function ReturnsPage() {
       ) : error ? (
         <ErrorAlert error={error} onRetry={() => refetch()} />
       ) : data ? (
-        <ReturnsContent data={data} />
+        <ReturnsContent data={data} taxMode={taxMode} />
       ) : null}
       {/* 같은 기간의 월말별 추이 (기간 수익률 조회 결과와 무관하게 따로 조회) */}
       <MonthlyTrendSection from={from} to={to} accountId={accountId} />
@@ -107,9 +113,12 @@ export function ReturnsPage() {
   );
 }
 
-function ReturnsContent({ data }: { data: PeriodReturnResponse }) {
+function ReturnsContent({ data, taxMode }: { data: PeriodReturnResponse; taxMode: TaxMode }) {
   const [tab, setTab] = useState<'total' | 'evaluation' | 'dividend'>('total');
   const t = data.total.total;
+  const tv = totalReturnView(t, taxMode);
+  const dividendTotal = dividendSumView(data.dividend.total, taxMode);
+  const taxLabel = TAX_MODE_LABEL[taxMode];
   const evalProfit = toNumber(t.evaluationAmount) - toNumber(t.purchaseAmount);
 
   if (data.total.items.length === 0) {
@@ -126,19 +135,19 @@ function ReturnsContent({ data }: { data: PeriodReturnResponse }) {
         <Grid size={{ xs: 12, md: 5 }}>
           <StatCard
             highlight
-            label={`총수익 (${formatDate(data.from)} ~ ${formatDate(data.to)})`}
+            label={`총수익 ${taxLabel} (${formatDate(data.from)} ~ ${formatDate(data.to)})`}
             value={
               <>
-                {formatSignedKrw(t.profit)}
+                {formatSignedKrw(tv.profit)}
                 <Typography component="span" variant="h6" sx={{ ml: 1, opacity: 0.9 }}>
-                  {formatRate(t.returnRate)}
+                  {formatRate(tv.returnRate)}
                 </Typography>
               </>
             }
             footer={
               <>
                 <KeyValue label="원금" value={formatKrw(t.purchaseAmount)} />
-                <KeyValue label="평가금액 + 배당금" value={formatKrw(t.totalAmount)} />
+                <KeyValue label={`평가금액 + 배당금(${taxLabel})`} value={formatKrw(tv.totalAmount)} />
               </>
             }
           />
@@ -153,27 +162,27 @@ function ReturnsContent({ data }: { data: PeriodReturnResponse }) {
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3.5 }}>
           <StatCard
-            label="배당금"
-            value={formatKrw(t.dividendAmount)}
+            label={`배당금 (${taxLabel})`}
+            value={formatKrw(tv.dividendAmount)}
             sub={
               <Typography variant="body2" color="text.secondary">
                 원금 대비{' '}
                 {toNumber(t.purchaseAmount) > 0
-                  ? `${((toNumber(t.dividendAmount) / toNumber(t.purchaseAmount)) * 100).toFixed(2)}%`
+                  ? `${((toNumber(tv.dividendAmount) / toNumber(t.purchaseAmount)) * 100).toFixed(2)}%`
                   : '-'}
               </Typography>
             }
             footer={
               <KeyValue
                 label="그중 미국 배당"
-                value={toNumber(data.dividend.total.usdAmount) > 0 ? formatUsd(data.dividend.total.usdAmount) : '-'}
+                value={toNumber(dividendTotal.usdAmount) > 0 ? formatUsd(dividendTotal.usdAmount) : '-'}
               />
             }
           />
         </Grid>
       </Grid>
 
-      <ContributionChart data={data} />
+      <ContributionChart data={data} taxMode={taxMode} />
 
       <Card sx={{ mt: 2 }}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 1 }}>
@@ -183,9 +192,9 @@ function ReturnsContent({ data }: { data: PeriodReturnResponse }) {
             <Tab value="dividend" label="배당금" />
           </Tabs>
         </Box>
-        {tab === 'total' && <TotalTable data={data} />}
+        {tab === 'total' && <TotalTable data={data} taxMode={taxMode} />}
         {tab === 'evaluation' && <EvaluationTable data={data} />}
-        {tab === 'dividend' && <DividendTable data={data} />}
+        {tab === 'dividend' && <DividendTable data={data} taxMode={taxMode} />}
       </Card>
       {data.exchangeRate && (
         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.5 }}>
@@ -198,18 +207,19 @@ function ReturnsContent({ data }: { data: PeriodReturnResponse }) {
 }
 
 /** 종목별 수익 기여: 평가손익 + 배당금 */
-function ContributionChart({ data }: { data: PeriodReturnResponse }) {
+function ContributionChart({ data, taxMode }: { data: PeriodReturnResponse; taxMode: TaxMode }) {
   const rows = useMemo(
     () =>
-      [...data.total.items]
-        .sort((a, b) => toNumber(b.profit) - toNumber(a.profit))
+      data.total.items
+        .map((item) => ({ item, view: totalReturnView(item, taxMode) }))
+        .sort((a, b) => toNumber(b.view.profit) - toNumber(a.view.profit))
         .slice(0, 12)
-        .map((i) => ({
-          name: i.name,
-          evaluation: toNumber(i.evaluationAmount) - toNumber(i.purchaseAmount),
-          dividend: toNumber(i.dividendAmount),
+        .map(({ item, view }) => ({
+          name: item.name,
+          evaluation: toNumber(item.evaluationAmount) - toNumber(item.purchaseAmount),
+          dividend: toNumber(view.dividendAmount),
         })),
-    [data],
+    [data, taxMode],
   );
 
   return (
@@ -244,7 +254,7 @@ function ContributionChart({ data }: { data: PeriodReturnResponse }) {
             },
             {
               data: rows.map((r) => r.dividend),
-              label: '배당금',
+              label: `배당금(${TAX_MODE_LABEL[taxMode]})`,
               stack: 'profit',
               color: USD_COLOR,
               valueFormatter: (v) => formatKrw(v),
@@ -256,8 +266,9 @@ function ContributionChart({ data }: { data: PeriodReturnResponse }) {
   );
 }
 
-function TotalTable({ data }: { data: PeriodReturnResponse }) {
+function TotalTable({ data, taxMode }: { data: PeriodReturnResponse; taxMode: TaxMode }) {
   const t = data.total.total;
+  const tv = totalReturnView(t, taxMode);
   return (
     <TableContainer>
       <Table size="small">
@@ -266,36 +277,39 @@ function TotalTable({ data }: { data: PeriodReturnResponse }) {
             <TableCell>종목</TableCell>
             <TableCell align="right">원금</TableCell>
             <TableCell align="right">평가금액</TableCell>
-            <TableCell align="right">배당금</TableCell>
+            <TableCell align="right">배당금({TAX_MODE_LABEL[taxMode]})</TableCell>
             <TableCell align="right">평가 + 배당</TableCell>
             <TableCell align="right">수익금</TableCell>
             <TableCell align="right">수익률</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
-          {data.total.items.map((i) => (
-            <TableRow key={i.securityId} hover>
-              <NameCell name={i.name} />
-              <TableCell align="right">{formatKrw(i.purchaseAmount)}</TableCell>
-              <TableCell align="right">{formatKrw(i.evaluationAmount)}</TableCell>
-              <TableCell align="right">{formatKrw(i.dividendAmount)}</TableCell>
-              <TableCell align="right">{formatKrw(i.totalAmount)}</TableCell>
-              <TableCell align="right">
-                <ProfitText value={i.profit}>{formatSignedKrw(i.profit)}</ProfitText>
-              </TableCell>
-              <TableCell align="right">
-                <ProfitText value={i.returnRate} />
-              </TableCell>
-            </TableRow>
-          ))}
+          {data.total.items.map((i) => {
+            const v = totalReturnView(i, taxMode);
+            return (
+              <TableRow key={i.securityId} hover>
+                <NameCell name={i.name} />
+                <TableCell align="right">{formatKrw(i.purchaseAmount)}</TableCell>
+                <TableCell align="right">{formatKrw(i.evaluationAmount)}</TableCell>
+                <TableCell align="right">{formatKrw(v.dividendAmount)}</TableCell>
+                <TableCell align="right">{formatKrw(v.totalAmount)}</TableCell>
+                <TableCell align="right">
+                  <ProfitText value={v.profit}>{formatSignedKrw(v.profit)}</ProfitText>
+                </TableCell>
+                <TableCell align="right">
+                  <ProfitText value={v.returnRate} />
+                </TableCell>
+              </TableRow>
+            );
+          })}
           <TotalRow
             cells={[
               formatKrw(t.purchaseAmount),
               formatKrw(t.evaluationAmount),
-              formatKrw(t.dividendAmount),
-              formatKrw(t.totalAmount),
-              <ProfitText value={t.profit}>{formatSignedKrw(t.profit)}</ProfitText>,
-              <ProfitText value={t.returnRate} />,
+              formatKrw(tv.dividendAmount),
+              formatKrw(tv.totalAmount),
+              <ProfitText value={tv.profit}>{formatSignedKrw(tv.profit)}</ProfitText>,
+              <ProfitText value={tv.returnRate} />,
             ]}
           />
         </TableBody>
@@ -365,7 +379,9 @@ function EvaluationTable({ data }: { data: PeriodReturnResponse }) {
   );
 }
 
-function DividendTable({ data }: { data: PeriodReturnResponse }) {
+function DividendTable({ data, taxMode }: { data: PeriodReturnResponse; taxMode: TaxMode }) {
+  const total = dividendSumView(data.dividend.total, taxMode);
+  const taxLabel = TAX_MODE_LABEL[taxMode];
   if (data.dividend.items.length === 0) {
     return <EmptyState title="이 기간에 받은 배당금이 없어요" />;
   }
@@ -375,21 +391,22 @@ function DividendTable({ data }: { data: PeriodReturnResponse }) {
         <TableHead>
           <TableRow>
             <TableCell>종목</TableCell>
-            <TableCell align="right">달러 배당금</TableCell>
-            <TableCell align="right">원화 배당금</TableCell>
+            <TableCell align="right">달러 배당금({taxLabel})</TableCell>
+            <TableCell align="right">원화 배당금({taxLabel})</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
-          {data.dividend.items.map((i) => (
-            <TableRow key={i.securityId} hover>
-              <NameCell name={i.name} currency={i.currency} />
-              <TableCell align="right">{i.usdAmount ? formatUsd(i.usdAmount) : '-'}</TableCell>
-              <TableCell align="right">{formatKrw(i.krwAmount)}</TableCell>
-            </TableRow>
-          ))}
-          <TotalRow
-            cells={[formatUsd(data.dividend.total.usdAmount), formatKrw(data.dividend.total.krwAmount)]}
-          />
+          {data.dividend.items.map((i) => {
+            const v = dividendSumView(i, taxMode);
+            return (
+              <TableRow key={i.securityId} hover>
+                <NameCell name={i.name} currency={i.currency} />
+                <TableCell align="right">{v.usdAmount ? formatUsd(v.usdAmount) : '-'}</TableCell>
+                <TableCell align="right">{formatKrw(v.krwAmount)}</TableCell>
+              </TableRow>
+            );
+          })}
+          <TotalRow cells={[formatUsd(total.usdAmount), formatKrw(total.krwAmount)]} />
         </TableBody>
       </Table>
     </TableContainer>

@@ -38,7 +38,15 @@ import {
 import { DateRange, DateRangeBar, PRESETS } from '../components/DateRangeBar';
 import { DividendMetricsSection } from '../components/DividendMetricsSection';
 import { CurrencyChip } from '../components/SecuritySearch';
+import { TaxModeToggle } from '../components/TaxModeToggle';
 import { KRW_COLOR, USD_COLOR } from '../lib/chart';
+import {
+  dividendItemView,
+  dividendSummaryView,
+  krwTaxAmount,
+  TAX_MODE_LABEL,
+  type TaxMode,
+} from '../lib/dividendTax';
 import {
   formatDate,
   formatExchangeRate,
@@ -79,6 +87,7 @@ export function DividendsPage() {
   const [presetKey, setPresetKey] = useState<string | null>(PRESETS.thisYear.key);
   const [range, setRange] = useState<DateRange>(PRESETS.thisYear.range);
   const [accountId, setAccountId] = useAccountParam();
+  const [taxMode, setTaxMode] = useState<TaxMode>('pre');
   const { data: accounts } = useAccounts();
   const { data, isLoading, isFetching, error, refetch } = useDividendHistory(
     range.from,
@@ -93,12 +102,16 @@ export function DividendsPage() {
       range.from && range.to
         ? monthsBetween(range.from, range.to)
         : data.months.map((m) => m.month);
-    return keys.map((month) => ({
-      month,
-      krw: toNumber(byMonth.get(month)?.summary.krwAmount ?? 0),
-      usdKrw: toNumber(byMonth.get(month)?.summary.usdKrwAmount ?? 0),
-    }));
-  }, [data, range.from, range.to]);
+    return keys.map((month) => {
+      const summary = byMonth.get(month)?.summary;
+      const view = summary ? dividendSummaryView(summary, taxMode) : undefined;
+      return {
+        month,
+        krw: toNumber(view?.krwAmount ?? 0),
+        usdKrw: toNumber(view?.usdKrwAmount ?? 0),
+      };
+    });
+  }, [data, range.from, range.to, taxMode]);
 
   const today = dayjs().format('YYYY-MM-DD');
   const upcoming = useMemo(
@@ -106,26 +119,30 @@ export function DividendsPage() {
       (data?.months ?? [])
         .flatMap((m) => m.items)
         .filter((i) => i.paymentDate > today)
-        .reduce((s, i) => s + toNumber(i.krwAmount ?? 0), 0),
-    [data, today],
+        .reduce((s, i) => s + toNumber(dividendItemView(i, taxMode).krwAmount ?? 0), 0),
+    [data, today, taxMode],
   );
 
   const monthCount = chartMonths.length || 1;
+  const total = data ? dividendSummaryView(data.total, taxMode) : undefined;
 
   return (
     <>
       <PageHeader
         title="배당금"
-        subtitle="배당락일 전날 보유 수량 × 주당 배당금 (세전) · 미국 배당은 지급일 환율로 원화 환산"
+        subtitle={`배당락일 전날 보유 수량 × 주당 배당금 (${TAX_MODE_LABEL[taxMode]}) · 미국 배당은 지급일 환율로 원화 환산`}
         action={
-          <AccountSelect
-            allowAll
-            size="small"
-            width={210}
-            value={accountId ?? null}
-            onChange={setAccountId}
-            accounts={accounts}
-          />
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+            <TaxModeToggle value={taxMode} onChange={setTaxMode} />
+            <AccountSelect
+              allowAll
+              size="small"
+              width={210}
+              value={accountId ?? null}
+              onChange={setAccountId}
+              accounts={accounts}
+            />
+          </Stack>
         }
       />
       <DateRangeBar
@@ -143,34 +160,39 @@ export function DividendsPage() {
         <Loading />
       ) : error ? (
         <ErrorAlert error={error} onRetry={() => refetch()} />
-      ) : data ? (
+      ) : data && total ? (
         <>
           <Grid container spacing={2} sx={{ mb: 2 }}>
             <Grid size={{ xs: 12, md: 4 }}>
               <StatCard
                 highlight
-                label="총 배당금"
-                value={formatKrw(data.total.totalKrwAmount)}
+                label={`총 배당금 (${TAX_MODE_LABEL[taxMode]})`}
+                value={formatKrw(total.totalKrwAmount)}
                 footer={
-                  <KeyValue
-                    label="월 평균"
-                    value={formatKrw(toNumber(data.total.totalKrwAmount) / monthCount)}
-                  />
+                  <>
+                    <KeyValue
+                      label="월 평균"
+                      value={formatKrw(toNumber(total.totalKrwAmount) / monthCount)}
+                    />
+                    {taxMode === 'after' && (
+                      <KeyValue label="세금 (원화 환산)" value={formatKrw(krwTaxAmount(data.total))} />
+                    )}
+                  </>
                 }
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 6, md: 4 }}>
               <StatCard
                 label="국내 배당금"
-                value={formatKrw(data.total.krwAmount)}
+                value={formatKrw(total.krwAmount)}
                 footer={<KeyValue label="지급 예정 포함 (원화 환산)" value={formatKrw(upcoming)} />}
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 6, md: 4 }}>
               <StatCard
                 label="미국 배당금"
-                value={formatUsd(data.total.usdAmount)}
-                footer={<KeyValue label="원화 환산" value={formatKrw(data.total.usdKrwAmount)} />}
+                value={formatUsd(total.usdAmount)}
+                footer={<KeyValue label="원화 환산" value={formatKrw(total.usdKrwAmount)} />}
               />
             </Grid>
           </Grid>
@@ -224,7 +246,13 @@ export function DividendsPage() {
                 월별 내역
               </Typography>
               {[...data.months].reverse().map((m, idx) => (
-                <MonthAccordion key={m.month} month={m} defaultExpanded={idx === 0} today={today} />
+                <MonthAccordion
+                  key={m.month}
+                  month={m}
+                  defaultExpanded={idx === 0}
+                  today={today}
+                  taxMode={taxMode}
+                />
               ))}
             </>
           )}
@@ -240,11 +268,14 @@ function MonthAccordion({
   month,
   defaultExpanded,
   today,
+  taxMode,
 }: {
   month: MonthlyDividend;
   defaultExpanded: boolean;
   today: string;
+  taxMode: TaxMode;
 }) {
+  const summary = dividendSummaryView(month.summary, taxMode);
   return (
     <Accordion
       defaultExpanded={defaultExpanded}
@@ -266,10 +297,10 @@ function MonthAccordion({
             </Typography>
           </Box>
           <Box sx={{ textAlign: 'right' }}>
-            <Typography sx={{ fontWeight: 700 }}>{formatKrw(month.summary.totalKrwAmount)}</Typography>
-            {toNumber(month.summary.usdAmount) > 0 && (
+            <Typography sx={{ fontWeight: 700 }}>{formatKrw(summary.totalKrwAmount)}</Typography>
+            {toNumber(summary.usdAmount) > 0 && (
               <Typography variant="caption" color="text.secondary">
-                국내 {formatKrw(month.summary.krwAmount)} · 미국 {formatUsd(month.summary.usdAmount)}
+                국내 {formatKrw(summary.krwAmount)} · 미국 {formatUsd(summary.usdAmount)}
               </Typography>
             )}
           </Box>
@@ -286,13 +317,14 @@ function MonthAccordion({
                 <TableCell>기준일</TableCell>
                 <TableCell align="right">주당 배당금</TableCell>
                 <TableCell align="right">보유 수량</TableCell>
-                <TableCell align="right">배당금</TableCell>
+                {taxMode === 'after' && <TableCell align="right">세금</TableCell>}
+                <TableCell align="right">{taxMode === 'after' ? '세후 배당금' : '배당금'}</TableCell>
                 <TableCell align="right">원화 환산</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {month.items.map((item) => (
-                <DividendRow key={`${item.securityId}-${item.noticeDate}-${item.paymentDate}`} item={item} today={today} />
+                <DividendRow key={`${item.securityId}-${item.noticeDate}-${item.paymentDate}`} item={item} today={today} taxMode={taxMode} />
               ))}
             </TableBody>
           </Table>
@@ -302,8 +334,9 @@ function MonthAccordion({
   );
 }
 
-function DividendRow({ item, today }: { item: DividendItem; today: string }) {
+function DividendRow({ item, today, taxMode }: { item: DividendItem; today: string; taxMode: TaxMode }) {
   const upcoming = item.paymentDate > today;
+  const view = dividendItemView(item, taxMode);
   return (
     <TableRow hover>
       <TableCell>
@@ -330,13 +363,16 @@ function DividendRow({ item, today }: { item: DividendItem; today: string }) {
       <TableCell>{formatDate(item.noticeDate)}</TableCell>
       <TableCell align="right">{formatPrice(item.perShareAmount, item.currency)}</TableCell>
       <TableCell align="right">{formatQuantity(item.quantity)}</TableCell>
-      <TableCell align="right">{formatMoney(item.amount, item.currency)}</TableCell>
+      {taxMode === 'after' && (
+        <TableCell align="right">{formatMoney(item.taxAmount, item.currency)}</TableCell>
+      )}
+      <TableCell align="right">{formatMoney(view.amount, item.currency)}</TableCell>
       <TableCell align="right">
         {item.currency === 'KRW' ? (
-          formatKrw(item.krwAmount)
-        ) : item.krwAmount ? (
+          formatKrw(view.krwAmount)
+        ) : view.krwAmount ? (
           <Tooltip title={`환율 ${formatExchangeRate(item.exchangeRate)} (${formatDate(item.exchangeRateDate)})`}>
-            <span>{formatKrw(item.krwAmount)}</span>
+            <span>{formatKrw(view.krwAmount)}</span>
           </Tooltip>
         ) : (
           <Tooltip title="지급일 환율 정보가 아직 없습니다.">
