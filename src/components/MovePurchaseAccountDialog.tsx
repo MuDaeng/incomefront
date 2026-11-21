@@ -5,25 +5,22 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  Link,
   Stack,
 } from '@mui/material';
 import { type KeyboardEvent, useState } from 'react';
-import { useUpdateSecurityCompany } from '../api/queries';
+import { Link as RouterLink } from 'react-router-dom';
+import { useAccounts, useUpdatePurchaseAccount } from '../api/queries';
 import type { PurchaseHistoryItem, SecurityInfo } from '../api/types';
+import { accountLabel } from '../lib/account';
 import { formatDate, formatPrice, formatQuantity } from '../lib/format';
 import { isFieldEnter } from '../lib/keyboard';
-import {
-  loadLastSecurityCompany,
-  saveLastSecurityCompany,
-  type SecurityCompany,
-  securityCompanyLabel,
-} from '../lib/securityCompany';
+import { AccountSelect } from './AccountSelect';
 import { KeyValue } from './common';
 import { useNotify } from './Notifier';
-import { SecurityCompanySelect } from './SecurityCompanySelect';
 
-/** 매수분 하나의 증권사 수정. 매도된 매수분도 수정할 수 있다 */
-export function EditSecurityCompanyDialog({
+/** 매수분 하나를 내 다른 계좌로 이동 (타사 이전 등). 매도된 매수분도 옮길 수 있다 */
+export function MovePurchaseAccountDialog({
   security,
   purchase,
   onClose,
@@ -32,7 +29,7 @@ export function EditSecurityCompanyDialog({
   purchase: PurchaseHistoryItem | null;
   onClose: () => void;
 }) {
-  const update = useUpdateSecurityCompany();
+  const update = useUpdatePurchaseAccount();
 
   const close = () => {
     if (update.isPending) return;
@@ -44,7 +41,7 @@ export function EditSecurityCompanyDialog({
     <Dialog open={!!purchase} onClose={close} fullWidth maxWidth="xs">
       {purchase && (
         // 매수분이 바뀔 때마다 선택값을 새로 초기화
-        <EditSecurityCompanyForm
+        <MovePurchaseAccountForm
           key={`${purchase.purchaseDate}-${purchase.sequence}`}
           security={security}
           purchase={purchase}
@@ -56,7 +53,7 @@ export function EditSecurityCompanyDialog({
   );
 }
 
-function EditSecurityCompanyForm({
+function MovePurchaseAccountForm({
   security,
   purchase,
   update,
@@ -64,30 +61,30 @@ function EditSecurityCompanyForm({
 }: {
   security: SecurityInfo;
   purchase: PurchaseHistoryItem;
-  update: ReturnType<typeof useUpdateSecurityCompany>;
+  update: ReturnType<typeof useUpdatePurchaseAccount>;
   onClose: () => void;
 }) {
   const notify = useNotify();
-  // 증권사별로 몰아서 고치는 경우가 많아, 마지막으로 고른 증권사를 미리 선택해 둔다 (없으면 현재 증권사)
-  const [company, setCompany] = useState<SecurityCompany | null>(
-    () => loadLastSecurityCompany() ?? purchase.securityCompany,
-  );
-  const canSave = !!company && company !== purchase.securityCompany && !update.isPending;
+  const { data: accounts, isLoading } = useAccounts();
+  // 지금 계좌는 옮길 곳이 아니므로 뺀다
+  const targets = accounts?.filter((a) => a.id !== purchase.accountId);
+  const [accountId, setAccountId] = useState<number | null>(null);
+  const target = targets?.find((a) => a.id === accountId);
+  const canSave = !!target && !update.isPending;
 
   const save = () => {
-    if (!canSave || !company) return;
+    if (!canSave || !target) return;
     update.mutate(
       {
         securityId: security.id,
         purchaseDate: purchase.purchaseDate,
         sequence: purchase.sequence,
-        securityCompany: company,
+        accountId: target.id,
       },
       {
         onSuccess: () => {
-          saveLastSecurityCompany(company);
           notify(
-            `${formatDate(purchase.purchaseDate)} 매수분 증권사를 ${securityCompanyLabel(company)}(으)로 바꿨습니다.`,
+            `${formatDate(purchase.purchaseDate)} 매수분을 ${accountLabel(target, accounts)} 계좌로 옮겼습니다.`,
           );
           update.reset();
           onClose();
@@ -104,7 +101,7 @@ function EditSecurityCompanyForm({
 
   return (
     <>
-      <DialogTitle>증권사 수정</DialogTitle>
+      <DialogTitle>계좌 이동</DialogTitle>
       <DialogContent>
         <Stack spacing={2}>
           <Stack sx={{ p: 2, borderRadius: 2, bgcolor: 'action.hover' }}>
@@ -115,11 +112,28 @@ function EditSecurityCompanyForm({
             />
             <KeyValue label="매수 단가" value={formatPrice(purchase.price, security.currency)} />
             <KeyValue label="수량" value={`${formatQuantity(purchase.amount)}주`} />
-            <KeyValue label="현재 증권사" value={securityCompanyLabel(purchase.securityCompany)} />
+            <KeyValue label="현재 계좌" value={accountLabel(purchase, accounts)} />
           </Stack>
           <Stack onKeyDown={onKeyDown}>
-            <SecurityCompanySelect value={company} onChange={setCompany} required autoFocus />
+            <AccountSelect
+              label="옮길 계좌"
+              value={accountId}
+              onChange={setAccountId}
+              accounts={targets}
+              required
+              autoFocus
+              disabled={isLoading || targets?.length === 0}
+            />
           </Stack>
+          {targets?.length === 0 && (
+            <Alert severity="info">
+              옮길 다른 계좌가 없습니다.{' '}
+              <Link component={RouterLink} to="/accounts">
+                계좌 관리
+              </Link>
+              에서 계좌를 먼저 추가하세요.
+            </Alert>
+          )}
           {update.error && (
             <Alert severity="error" sx={{ whiteSpace: 'pre-line' }}>
               {update.error.message}
@@ -128,11 +142,14 @@ function EditSecurityCompanyForm({
         </Stack>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
+        <Button component={RouterLink} to="/accounts" color="inherit" sx={{ mr: 'auto' }}>
+          계좌 관리
+        </Button>
         <Button onClick={onClose} color="inherit" disabled={update.isPending}>
           취소
         </Button>
         <Button variant="contained" onClick={save} disabled={!canSave} loading={update.isPending}>
-          저장
+          이동
         </Button>
       </DialogActions>
     </>

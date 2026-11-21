@@ -1,3 +1,4 @@
+import type { AccountType } from '../lib/account';
 import type { SecurityCompany } from '../lib/securityCompany';
 
 /**
@@ -97,10 +98,31 @@ export interface PriceSearchItem {
   updatedAt: string;
 }
 
-/* ---------- 통합잔고 ---------- */
-/** 증권사 하나의 보유 수량 (미매도 매수분 합). 수량 있는 증권사만, enum 순서 */
-export interface CompanyAmount {
+/* ---------- 계좌 ---------- */
+/** GET /accounts 항목. id는 사용자별 순번 */
+export interface Account {
+  id: number;
   securityCompany: SecurityCompany;
+  accountType: AccountType;
+}
+
+export interface AccountListResponse {
+  /** id 순 */
+  accounts: Account[];
+}
+
+/** POST /accounts 본문. accountType을 생략하면 일반(NORMAL) */
+export interface CreateAccountRequest {
+  securityCompany: SecurityCompany;
+  accountType?: AccountType;
+}
+
+/* ---------- 통합잔고 ---------- */
+/** 계좌 하나의 보유 수량 (미매도 매수분 합). 수량 있는 계좌만, 계좌 id 순 */
+export interface AccountAmount {
+  accountId: number;
+  securityCompany: SecurityCompany;
+  accountType: AccountType;
   amount: string;
 }
 
@@ -110,10 +132,10 @@ export interface BalanceItem {
   symbol: string;
   name: string;
   currency: Currency;
-  /** 총 보유 수량 (증권사별 수량의 합) */
+  /** 총 보유 수량 (계좌별 수량의 합) */
   amount: string;
-  /** 증권사별 보유 수량 (securityCompany 필터를 주면 그 증권사만) */
-  companyAmounts: CompanyAmount[];
+  /** 계좌별 보유 수량 (accountId 필터를 주면 그 계좌만) */
+  accountAmounts: AccountAmount[];
   currentPrice: string;
   krwAveragePrice: string;
   usdAveragePrice: string | null;
@@ -151,8 +173,11 @@ export interface IntegratedBalanceResponse {
 export interface PurchaseHistoryItem {
   purchaseDate: string;
   sequence: number;
-  /** 매수한 증권사 */
+  /** 매수한 계좌 */
+  accountId: number;
+  /** 계좌의 증권사 */
   securityCompany: SecurityCompany;
+  accountType: AccountType;
   amount: string;
   price: string;
   saleDate: string | null;
@@ -162,10 +187,10 @@ export interface PurchaseHistoryItem {
 
 export interface PurchaseHistoryResponse {
   security: SecurityInfo;
-  /** 총 보유 수량 (미매도 매수분 합, securityCompany 필터 적용) */
+  /** 총 보유 수량 (미매도 매수분 합, accountId 필터 적용) */
   amount: string;
-  /** 증권사별 보유 수량 (미매도분, 수량 있는 증권사만, enum 순서) */
-  companyAmounts: CompanyAmount[];
+  /** 계좌별 보유 수량 (미매도분, 수량 있는 계좌만, 계좌 id 순) */
+  accountAmounts: AccountAmount[];
   items: PurchaseHistoryItem[];
 }
 
@@ -173,6 +198,8 @@ export interface RegisterBalanceRequest {
   securityId: string;
   /** 매수한 증권사 (필수) */
   securityCompany: SecurityCompany;
+  /** 매수한 내 계좌. 생략하면 그 증권사의 첫 계좌, 없으면 일반 계좌를 새로 만든다 */
+  accountId?: number;
   purchaseDate: string;
   amount: string;
   price: string;
@@ -189,10 +216,12 @@ export interface SellBalanceRequest {
   saleDate: string;
 }
 
-/** 증권사별 일괄매도 (POST /balance/sale/bulk 본문). 그 증권사의 미매도 매수분 중 saleDate 이전(당일 포함) 매수분을 최근 순(LIFO)으로 amount만큼 매도 */
+/** 계좌별 일괄매도 (POST /balance/sale/bulk 본문). 그 계좌의 미매도 매수분 중 saleDate 이전(당일 포함) 매수분을 최근 순(LIFO)으로 amount만큼 매도 */
 export interface BulkSellBalanceRequest {
   securityId: string;
   securityCompany: SecurityCompany;
+  /** 생략하면 그 증권사의 첫 계좌 */
+  accountId?: number;
   amount: string;
   saleDate: string;
 }
@@ -223,8 +252,21 @@ export interface TossTransaction {
   isCancellation: boolean;
 }
 
+/** 출고 한 건의 키 (거래 id가 없어 ISIN·결제일·수량·순번으로 구분). 서버가 준 값을 그대로 돌려보낸다 */
+export interface TossTransferKey {
+  isinCode: string;
+  settlementDate: string;
+  quantity: string;
+  /** 같은 (ISIN, 결제일, 수량) 출고 안에서의 순번 (0부터, 처리일시 순) */
+  index: number;
+}
+
 export interface BulkRegisterTossRequest {
+  /** 등록할 내 Toss 계좌. 생략하면 첫 Toss 계좌, 없으면 일반 계좌를 새로 만든다 */
+  accountId?: number;
   transactionList: TossTransaction[];
+  /** 매도로 처리할 출고(실제로 나간 주식). 출고는 기본으로 주식 빌려주기로 보고 매도하지 않는다 */
+  confirmedTransfersOut?: TossTransferKey[];
 }
 
 export interface TossSkippedTransaction {
@@ -233,28 +275,34 @@ export interface TossSkippedTransaction {
   reason: string;
 }
 
+/** 아직 반환되지 않은 빌려주기 출고 (대여 중으로 보고 매도하지 않은 출고) */
+export interface TossLentTransfer {
+  key: TossTransferKey;
+  /** 아직 반환되지 않은 수량 (부분 반환이면 출고 수량보다 적다) */
+  remainingQuantity: string;
+}
+
 /** POST /balance/toss 결과 */
 export interface BulkRegisterTossResponse {
-  /** 삭제한 기존 TOSS 매수분(매도분 포함) 행 수 */
+  /** 등록한 계좌 id */
+  accountId: number;
+  /** 삭제한 그 계좌의 기존 매수분(매도분 포함) 행 수 */
   deletedCount: number;
-  /** 등록한 BUY·SECURITIES_TRANSFER_IN 거래 수 */
+  /** 등록한 BUY·SECURITIES_TRANSFER_IN 거래 수 (빌려주기 반환으로 전량 상쇄된 입고 제외) */
   boughtCount: number;
-  /** 매도 처리한 SELL·SECURITIES_TRANSFER_OUT 거래 수 */
+  /** 매도 처리한 SELL·실제 출고(confirmedTransfersOut) 거래 수 */
   soldCount: number;
   skipped: TossSkippedTransaction[];
+  /** 대여 중으로 보고 무시한 출고 */
+  lentTransfers: TossLentTransfer[];
 }
 
-/** 매수 기록이 있는 증권사 목록 (GET /balance/security-companies). 중복 없음, 매도분 포함, enum 순서 */
-export interface SecurityCompanyListResponse {
-  securityCompanies: SecurityCompany[];
-}
-
-/** 매수분 하나의 증권사 수정 (PATCH /balance/purchases/security-company 본문) */
-export interface UpdateSecurityCompanyRequest {
+/** 매수분 하나를 내 다른 계좌로 이동 (PATCH /balance/purchases/account 본문) */
+export interface UpdatePurchaseAccountRequest {
   securityId: string;
   purchaseDate: string;
   sequence: number;
-  securityCompany: SecurityCompany;
+  accountId: number;
 }
 
 /** 잘못 등록한 매수분 하나 삭제 (DELETE /balance/purchases 쿼리) */

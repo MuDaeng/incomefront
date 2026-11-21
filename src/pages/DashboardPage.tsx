@@ -20,8 +20,9 @@ import {
 import { PieChart } from '@mui/x-charts/PieChart';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useDividendMetrics, useIntegratedBalance, useSecurityCompanies } from '../api/queries';
-import type { BalanceItem } from '../api/types';
+import { useAccounts, useDividendMetrics, useIntegratedBalance } from '../api/queries';
+import type { Account, BalanceItem } from '../api/types';
+import { AccountSelect } from '../components/AccountSelect';
 import {
   EmptyState,
   ErrorAlert,
@@ -32,7 +33,7 @@ import {
   StatCard,
 } from '../components/common';
 import { useLayout } from '../components/Layout';
-import { CompanyAmountChips, SecurityCompanySelect } from '../components/SecurityCompanySelect';
+import { AccountAmountChips } from '../components/SecurityCompanySelect';
 import { CurrencyChip, SymbolChip } from '../components/SecuritySearch';
 import {
   formatDate,
@@ -47,26 +48,21 @@ import {
   toNumber,
 } from '../lib/format';
 import { CHART_COLORS, KRW_COLOR, USD_COLOR } from '../lib/chart';
-import {
-  type SecurityCompany,
-  securityCompanyLabel,
-  securityDetailPath,
-  filterCompanyOptions,
-} from '../lib/securityCompany';
-import { useSecurityCompanyParam } from '../lib/useSecurityCompanyParam';
+import { accountLabel, securityDetailPath } from '../lib/account';
+import { useAccountParam } from '../lib/useAccountParam';
 import { monthlyAverage } from '../lib/dividendMetrics';
 
 type Filter = 'ALL' | 'KRW' | 'USD';
 
 export function DashboardPage() {
   const { openRegister } = useLayout();
-  // 증권사 필터는 URL 쿼리(?securityCompany=)에 둔다: 새로고침·뒤로 가기에도 유지
-  const [securityCompany, setSecurityCompany] = useSecurityCompanyParam();
-  const { data, isLoading, error, refetch } = useIntegratedBalance(securityCompany);
+  // 계좌 필터는 URL 쿼리(?accountId=)에 둔다: 새로고침·뒤로 가기에도 유지
+  const [accountId, setAccountId] = useAccountParam();
+  const { data, isLoading, error, refetch } = useIntegratedBalance(accountId);
   // 배당 지표는 잔고와 따로 불러온다 (배당 원천 갱신 때문에 느릴 수 있어 잔고 화면을 막지 않는다)
-  const { data: dividendMetrics } = useDividendMetrics(securityCompany);
-  // 필터 목록은 매수 기록이 있는 증권사만
-  const { data: companies } = useSecurityCompanies();
+  const { data: dividendMetrics } = useDividendMetrics(accountId);
+  const { data: accounts } = useAccounts();
+  const selectedAccount = accounts?.find((a) => a.id === accountId);
   const [filter, setFilter] = useState<Filter>('ALL');
 
   const items = useMemo(
@@ -78,19 +74,19 @@ export function DashboardPage() {
   );
 
   const registerButton = (
-    <Button variant="contained" startIcon={<Add />} onClick={() => openRegister(undefined, securityCompany)}>
+    <Button variant="contained" startIcon={<Add />} onClick={() => openRegister(undefined, accountId)}>
       매수 등록
     </Button>
   );
   const headerAction = (
     <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-      <SecurityCompanySelect
+      <AccountSelect
         allowAll
         size="small"
-        width={190}
-        value={securityCompany ?? null}
-        onChange={setSecurityCompany}
-        companies={filterCompanyOptions(companies, securityCompany)}
+        width={210}
+        value={accountId ?? null}
+        onChange={setAccountId}
+        accounts={accounts}
       />
       {registerButton}
     </Stack>
@@ -105,10 +101,10 @@ export function DashboardPage() {
       <>
         <PageHeader title="통합잔고" action={headerAction} />
         <Card>
-          {securityCompany ? (
+          {accountId ? (
             <EmptyState
-              title={`${securityCompanyLabel(securityCompany)}로 보유한 종목이 없어요`}
-              description="다른 증권사를 고르거나 전체 증권사로 바꿔 보세요."
+              title={`${selectedAccount ? accountLabel(selectedAccount, accounts) : '이 계좌'}로 보유한 종목이 없어요`}
+              description="다른 계좌를 고르거나 전체 계좌로 바꿔 보세요."
             />
           ) : (
             <EmptyState
@@ -240,7 +236,7 @@ export function DashboardPage() {
                 </ToggleButtonGroup>
               }
             />
-            <HoldingsTable items={items} securityCompany={securityCompany} />
+            <HoldingsTable items={items} accountId={accountId} accounts={accounts} />
           </Card>
         </Grid>
       </Grid>
@@ -255,11 +251,14 @@ const formatRateRaw = (v: string) => {
 
 function HoldingsTable({
   items,
-  securityCompany,
+  accountId,
+  accounts,
 }: {
   items: BalanceItem[];
-  /** 상세 화면에도 같은 증권사 필터를 넘긴다 */
-  securityCompany?: SecurityCompany;
+  /** 상세 화면에도 같은 계좌 필터를 넘긴다 */
+  accountId?: number;
+  /** 계좌 칩 이름에서 같은 증권사·타입 계좌를 구분할 때 쓴다 */
+  accounts?: readonly Account[];
 }) {
   const navigate = useNavigate();
   return (
@@ -288,7 +287,7 @@ function HoldingsTable({
                 key={item.securityId}
                 hover
                 onClick={() =>
-                  navigate(securityDetailPath(item.securityId, securityCompany))
+                  navigate(securityDetailPath(item.securityId, accountId))
                 }
                 sx={{ cursor: 'pointer', '& td': { py: 1.25 } }}
               >
@@ -307,8 +306,9 @@ function HoldingsTable({
                 </TableCell>
                 <TableCell align="right">
                   {formatQuantity(item.amount)}
-                  <CompanyAmountChips
-                    companyAmounts={item.companyAmounts}
+                  <AccountAmountChips
+                    accountAmounts={item.accountAmounts}
+                    accounts={accounts}
                     formatAmount={formatQuantity}
                     justify="flex-end"
                     hideSingleAmount

@@ -20,6 +20,7 @@ import { AuthProvider, CALLBACK_PATH, useAuth } from './auth/AuthProvider';
 import { EmptyState, Loading } from './components/common';
 import { Layout } from './components/Layout';
 import { NotifierProvider } from './components/Notifier';
+import { AccountsPage } from './pages/AccountsPage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { DividendsPage } from './pages/DividendsPage';
@@ -88,6 +89,7 @@ export default function App() {
                       <Route path="securities/:securityId" element={<SecurityDetailPage />} />
                       <Route path="dividends" element={<DividendsPage />} />
                       <Route path="returns" element={<ReturnsPage />} />
+                      <Route path="accounts" element={<AccountsPage />} />
                       <Route path="toss-import" element={<TossImportPage />} />
                       <Route path="admin/batches" element={<AdminBatchPage />} />
                       <Route path="admin/price-searches" element={<AdminPriceSearchPage />} />

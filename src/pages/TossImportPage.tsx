@@ -23,11 +23,18 @@ import {
 } from '@mui/material';
 import { type ChangeEvent, useMemo, useRef, useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
-import { useBulkRegisterToss } from '../api/queries';
-import type { BulkRegisterTossResponse, Currency, TossTransaction } from '../api/types';
+import { useAccounts, useBulkRegisterToss } from '../api/queries';
+import type {
+  BulkRegisterTossResponse,
+  Currency,
+  TossTransaction,
+  TossTransferKey,
+} from '../api/types';
+import { AccountSelect } from '../components/AccountSelect';
 import { EmptyState, KeyValue, PageHeader } from '../components/common';
 import { useNotify } from '../components/Notifier';
 import { SecurityCompanySelect } from '../components/SecurityCompanySelect';
+import { accountLabel } from '../lib/account';
 import type { SecurityCompany } from '../lib/securityCompany';
 import {
   FALL_COLOR,
@@ -47,6 +54,8 @@ import {
   tossSkipReason,
   tossTradeDate,
   tossTransactionKind,
+  tossTransferKeyId,
+  mergeTransferKeys,
 } from '../lib/tossImport';
 
 /** 일괄등록을 지원하는 증권사. 지금은 백엔드에 POST /balance/toss만 있어 토스증권 고정 */
@@ -59,7 +68,13 @@ const ROWS_PER_PAGE = 100;
 type Step =
   | { name: 'input' }
   | { name: 'preview'; transactions: TossTransaction[] }
-  | { name: 'result'; transactions: TossTransaction[]; result: BulkRegisterTossResponse };
+  | {
+      name: 'result';
+      transactions: TossTransaction[];
+      result: BulkRegisterTossResponse;
+      /** 지금까지 실제 출고로 확인해 매도 처리한 출고 */
+      confirmed: TossTransferKey[];
+    };
 
 /**
  * Toss 거래내역 일괄등록: JSON(파일·붙여넣기) 입력 → 그리드 미리보기 → 확인 후 POST /balance/toss.
@@ -68,6 +83,8 @@ type Step =
 export function TossImportPage() {
   const [step, setStep] = useState<Step>({ name: 'input' });
   const [text, setText] = useState('');
+  // 등록할 Toss 계좌 (null = 첫 Toss 계좌, 없으면 서버가 일반 계좌를 새로 만든다)
+  const [accountId, setAccountId] = useState<number | null>(null);
 
   return (
     <>
@@ -79,20 +96,31 @@ export function TossImportPage() {
         <InputStep
           text={text}
           onTextChange={setText}
+          accountId={accountId}
+          onAccountChange={setAccountId}
           onPreview={(transactions) => setStep({ name: 'preview', transactions })}
         />
       )}
       {step.name === 'preview' && (
         <PreviewStep
           transactions={step.transactions}
+          accountId={accountId}
           onBack={() => setStep({ name: 'input' })}
-          onDone={(result) => setStep({ name: 'result', transactions: step.transactions, result })}
+          onDone={(result) =>
+            setStep({ name: 'result', transactions: step.transactions, result, confirmed: [] })
+          }
         />
       )}
       {step.name === 'result' && (
         <ResultStep
           transactions={step.transactions}
           result={step.result}
+          confirmed={step.confirmed}
+          onResubmitted={(result, confirmed) => {
+            // 서버가 처음 등록 때 정한 계좌를 다음 요청에도 그대로 쓴다
+            setAccountId(result.accountId);
+            setStep({ name: 'result', transactions: step.transactions, result, confirmed });
+          }}
           onRestart={() => {
             setText('');
             setStep({ name: 'input' });
@@ -106,12 +134,17 @@ export function TossImportPage() {
 function InputStep({
   text,
   onTextChange,
+  accountId,
+  onAccountChange,
   onPreview,
 }: {
   text: string;
   onTextChange: (text: string) => void;
+  accountId: number | null;
+  onAccountChange: (accountId: number | null) => void;
   onPreview: (transactions: TossTransaction[]) => void;
 }) {
+  const { data: accounts } = useAccounts(IMPORT_COMPANY);
   const fileRef = useRef<HTMLInputElement>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -144,15 +177,31 @@ function InputStep({
     <Card>
       <CardContent>
         <Stack spacing={2}>
-          <SecurityCompanySelect
-            value={IMPORT_COMPANY}
-            companies={IMPORT_COMPANIES}
-            onChange={() => {}}
-            disabled
-            helperText="다른 증권사는 추후 출시 예정입니다."
-            size="small"
-            width={240}
-          />
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+            <SecurityCompanySelect
+              value={IMPORT_COMPANY}
+              companies={IMPORT_COMPANIES}
+              onChange={() => {}}
+              disabled
+              helperText="다른 증권사는 추후 출시 예정입니다."
+              size="small"
+              width={240}
+            />
+            <AccountSelect
+              value={accountId}
+              onChange={onAccountChange}
+              accounts={accounts}
+              allowAll
+              allLabel={accounts && accounts.length > 0 ? '첫 토스증권 계좌' : '새 일반 계좌'}
+              size="small"
+              width={240}
+              helperText={
+                accounts && accounts.length === 0
+                  ? '토스증권 계좌가 없어 등록할 때 일반 계좌가 만들어집니다.'
+                  : '이 계좌의 기록을 거래내역으로 다시 등록합니다.'
+              }
+            />
+          </Stack>
           <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 1 }}>
             <Button
               variant="outlined"
@@ -216,15 +265,20 @@ function KindChip({ kind }: { kind: TossKind }) {
 
 function PreviewStep({
   transactions,
+  accountId,
   onBack,
   onDone,
 }: {
   transactions: TossTransaction[];
+  accountId: number | null;
   onBack: () => void;
   onDone: (result: BulkRegisterTossResponse) => void;
 }) {
   const notify = useNotify();
   const register = useBulkRegisterToss();
+  const { data: accounts } = useAccounts(IMPORT_COMPANY);
+  const account = accounts?.find((a) => a.id === accountId);
+  const targetName = account ? accountLabel(account, accounts) : '토스증권';
   const [filter, setFilter] = useState<Filter>('all');
   const [page, setPage] = useState(0);
   const [confirmed, setConfirmed] = useState(false);
@@ -268,7 +322,7 @@ function PreviewStep({
   const submit = () => {
     if (!confirmed || tooLarge || register.isPending) return;
     register.mutate(
-      { transactionList: transactions },
+      { accountId: accountId ?? undefined, transactionList: transactions },
       {
         onSuccess: (result) => {
           notify(`Toss 거래내역 일괄등록을 마쳤습니다. (매수 ${result.boughtCount}건 · 매도 ${result.soldCount}건)`);
@@ -384,7 +438,9 @@ function PreviewStep({
           <Stack spacing={1.5}>
             <Typography variant="body2" color="text.secondary">
               거래일은 결제일에서 2거래일 앞당긴 체결일입니다. 미리보기는 주말만 빼고 계산해서, 공휴일이 끼면 서버에
-              등록되는 날짜가 더 이를 수 있습니다. 매도·출고는 최근 매수분부터 차감됩니다.
+              등록되는 날짜가 더 이를 수 있습니다. 매도는 최근 매수분부터 차감됩니다.
+              출고는 주식 빌려주기로 보고 매도하지 않으며, 뒤에 같은 종목 입고가 있으면 반환으로 상쇄합니다. 실제로
+              주식이 나간 출고(타사 이체 등)는 등록 후 결과 화면에서 골라 매도로 다시 등록할 수 있습니다.
               입고는 체결가가 없어 입고일 이전 최근 종가로 등록되고, 시세가 없으면 서버에서 제외됩니다.
             </Typography>
             {tooLarge && (
@@ -393,14 +449,14 @@ function PreviewStep({
               </Alert>
             )}
             <Alert severity="warning">
-              일괄등록하면 기존 토스증권 매수·매도 기록을 모두 지우고 이 거래내역 {summary.total}건으로 다시
-              등록합니다. 매도할 보유 수량이 모자라면 아무것도 바뀌지 않습니다.
+              일괄등록하면 {targetName} 계좌의 기존 매수·매도 기록을 모두 지우고 이 거래내역 {summary.total}건으로
+              다시 등록합니다. 매도할 보유 수량이 모자라면 아무것도 바뀌지 않습니다.
             </Alert>
             <FormControlLabel
               control={
                 <Checkbox checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} />
               }
-              label="위 거래내역을 확인했고, 기존 토스증권 기록을 덮어씁니다."
+              label={`위 거래내역을 확인했고, 기존 ${targetName} 기록을 덮어씁니다.`}
             />
             {register.error && (
               <Alert severity="error" sx={{ whiteSpace: 'pre-line' }}>
@@ -431,13 +487,24 @@ function PreviewStep({
 function ResultStep({
   transactions,
   result,
+  confirmed,
+  onResubmitted,
   onRestart,
 }: {
   transactions: TossTransaction[];
   result: BulkRegisterTossResponse;
+  confirmed: TossTransferKey[];
+  onResubmitted: (result: BulkRegisterTossResponse, confirmed: TossTransferKey[]) => void;
   onRestart: () => void;
 }) {
-  // skipped에는 isinCode만 오므로 입력 목록에서 심볼을 찾아 보여준다 (securityId는 화면에 노출하지 않음)
+  const notify = useNotify();
+  const register = useBulkRegisterToss();
+  const { data: accounts } = useAccounts(IMPORT_COMPANY);
+  const account = accounts?.find((a) => a.id === result.accountId);
+  // 대여 중으로 본 출고 중 실제 출고로 고른 것 (키 문자열)
+  const [checked, setChecked] = useState<ReadonlySet<string>>(() => new Set());
+
+  // skipped·lentTransfers에는 isinCode만 오므로 입력 목록에서 심볼을 찾아 보여준다 (securityId는 화면에 노출하지 않음)
   const symbolByIsin = useMemo(() => {
     const map = new Map<string, string>();
     for (const tx of transactions) {
@@ -446,15 +513,50 @@ function ResultStep({
     return map;
   }, [transactions]);
 
+  const toggle = (id: string) =>
+    setChecked((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const resubmit = () => {
+    if (checked.size === 0 || register.isPending) return;
+    const added = result.lentTransfers
+      .filter((l) => checked.has(tossTransferKeyId(l.key)))
+      .map((l) => l.key);
+    const nextConfirmed = mergeTransferKeys(confirmed, added);
+    register.mutate(
+      {
+        accountId: result.accountId,
+        transactionList: transactions,
+        confirmedTransfersOut: nextConfirmed,
+      },
+      {
+        onSuccess: (next) => {
+          notify(`출고 ${added.length}건을 매도로 처리해 다시 등록했습니다.`);
+          setChecked(new Set());
+          onResubmitted(next, nextConfirmed);
+        },
+      },
+    );
+  };
+
   return (
     <Stack spacing={2}>
       <Card>
         <CardContent>
           <Stack spacing={0.5} sx={{ maxWidth: 360 }}>
+            <KeyValue
+              label="등록한 계좌"
+              value={account ? accountLabel(account, accounts) : `토스증권 계좌 #${result.accountId}`}
+            />
             <KeyValue label="삭제한 기존 기록" value={`${result.deletedCount}건`} />
             <KeyValue label="등록한 매수·입고" value={`${result.boughtCount}건`} />
             <KeyValue label="처리한 매도·출고" value={`${result.soldCount}건`} />
             <KeyValue label="건너뛴 거래" value={`${result.skipped.length}건`} />
+            <KeyValue label="대여 중으로 본 출고" value={`${result.lentTransfers.length}건`} />
           </Stack>
           <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
             <Button variant="contained" component={RouterLink} to="/">
@@ -466,6 +568,73 @@ function ResultStep({
           </Stack>
         </CardContent>
       </Card>
+      {result.lentTransfers.length > 0 && (
+        <Card>
+          <CardContent sx={{ pb: 1 }}>
+            <Typography variant="subtitle2">대여 중으로 본 출고</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+              주식 빌려주기로 보고 매도하지 않은 출고입니다. 타사 이체처럼 실제로 주식이 나간 출고를 고르면 같은
+              거래내역으로 다시 등록하면서 최근 매수분부터 매도합니다.
+            </Typography>
+          </CardContent>
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell padding="checkbox" />
+                  <TableCell>종목</TableCell>
+                  <TableCell>거래일</TableCell>
+                  <TableCell align="right">출고 수량</TableCell>
+                  <TableCell align="right">미반환 수량</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {result.lentTransfers.map((l) => {
+                  const id = tossTransferKeyId(l.key);
+                  return (
+                    <TableRow key={id} hover onClick={() => toggle(id)} sx={{ cursor: 'pointer' }}>
+                      <TableCell padding="checkbox">
+                        <Checkbox
+                          checked={checked.has(id)}
+                          slotProps={{ input: { 'aria-label': '실제 출고' } }}
+                        />
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>{symbolByIsin.get(l.key.isinCode) ?? '-'}</TableCell>
+                      <TableCell sx={numericSx}>
+                        {formatDate(tossTradeDate({ settlementDate: l.key.settlementDate }))}
+                      </TableCell>
+                      <TableCell align="right" sx={numericSx}>
+                        {formatQuantity(l.key.quantity)}
+                      </TableCell>
+                      <TableCell align="right" sx={numericSx}>
+                        {formatQuantity(l.remainingQuantity)}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          <Stack spacing={1.5} sx={{ p: 2 }}>
+            {register.error && (
+              <Alert severity="error" sx={{ whiteSpace: 'pre-line' }}>
+                {register.error.message}
+              </Alert>
+            )}
+            <Stack direction="row" sx={{ justifyContent: 'flex-end' }}>
+              <Button
+                variant="contained"
+                color="error"
+                onClick={resubmit}
+                disabled={checked.size === 0}
+                loading={register.isPending}
+              >
+                선택한 출고 {checked.size}건을 매도로 다시 등록
+              </Button>
+            </Stack>
+          </Stack>
+        </Card>
+      )}
       {result.skipped.length > 0 && (
         <Card>
           <Typography variant="subtitle2" sx={{ px: 2, pt: 2 }}>

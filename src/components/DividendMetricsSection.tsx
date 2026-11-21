@@ -25,7 +25,7 @@ import {
   formatPrice,
   formatQuantity,
 } from '../lib/format';
-import { type SecurityCompany, securityDetailPath } from '../lib/securityCompany';
+import { securityDetailPath } from '../lib/account';
 import { EmptyState, ErrorAlert, KeyValue, Loading, ProfitText, StatCard } from './common';
 import { CurrencyChip, SymbolChip } from './SecuritySearch';
 
@@ -33,9 +33,9 @@ import { CurrencyChip, SymbolChip } from './SecuritySearch';
  * 현재 보유 종목의 배당 지표(세전): 예상 연배당·월평균·YOC·현재 배당률과 종목별 표.
  * 배당금 페이지의 기간 필터와 무관하게 오늘 기준이다.
  */
-export function DividendMetricsSection({ securityCompany }: { securityCompany?: SecurityCompany }) {
+export function DividendMetricsSection({ accountId }: { accountId?: number }) {
   const navigate = useNavigate();
-  const { data, isLoading, error, refetch } = useDividendMetrics(securityCompany);
+  const { data, isLoading, error, refetch } = useDividendMetrics(accountId);
   const items = useMemo(() => sortByAnnualDividend(data?.items ?? []), [data]);
 
   return (
@@ -108,7 +108,7 @@ export function DividendMetricsSection({ securityCompany }: { securityCompany?: 
                     <TableRow
                       key={item.securityId}
                       hover
-                      onClick={() => navigate(securityDetailPath(item.securityId, securityCompany))}
+                      onClick={() => navigate(securityDetailPath(item.securityId, accountId))}
                       sx={{ cursor: 'pointer' }}
                     >
                       <TableCell>

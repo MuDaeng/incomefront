@@ -16,7 +16,14 @@ import {
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs, { Dayjs } from 'dayjs';
 import { type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from 'react';
-import { useDailyPrices, useRegisterBalance } from '../api/queries';
+import { useAccounts, useDailyPrices, useRegisterBalance } from '../api/queries';
+import {
+  accountLabel,
+  defaultAccountId,
+  initialRegisterAccount,
+  loadLastAccount,
+  saveLastAccount,
+} from '../lib/account';
 import {
   formatDate,
   formatExchangeRate,
@@ -27,15 +34,11 @@ import {
   toPriceInput,
 } from '../lib/format';
 import { focusFirstField, isFieldEnter } from '../lib/keyboard';
-import {
-  loadLastSecurityCompany,
-  saveLastSecurityCompany,
-  type SecurityCompany,
-  securityCompanyLabel,
-} from '../lib/securityCompany';
+import { type SecurityCompany, securityCompanyLabel } from '../lib/securityCompany';
 import { useDebounced } from '../lib/useDebounced';
 import { staticFocusSx } from './common';
 import { useNotify } from './Notifier';
+import { AccountSelect } from './AccountSelect';
 import { SecurityCompanySelect } from './SecurityCompanySelect';
 import { SecurityOption, SecuritySearch } from './SecuritySearch';
 
@@ -45,20 +48,20 @@ export function RegisterPurchaseDialog({
   open,
   onClose,
   initialSecurity,
-  initialSecurityCompany,
+  initialAccountId,
 }: {
   open: boolean;
   onClose: () => void;
   initialSecurity?: SecurityOption | null;
-  /** 증권사 처음 값 (없으면 마지막으로 등록한 증권사) */
-  initialSecurityCompany?: SecurityCompany;
+  /** 계좌 처음 값 (페이지의 계좌 필터, 없으면 마지막으로 등록한 증권사·계좌) */
+  initialAccountId?: number;
 }) {
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
       <RegisterPurchaseForm
         onClose={onClose}
         initialSecurity={initialSecurity ?? null}
-        initialSecurityCompany={initialSecurityCompany}
+        initialAccountId={initialAccountId}
       />
     </Dialog>
   );
@@ -67,19 +70,43 @@ export function RegisterPurchaseDialog({
 function RegisterPurchaseForm({
   onClose,
   initialSecurity,
-  initialSecurityCompany,
+  initialAccountId,
 }: {
   onClose: () => void;
   initialSecurity: SecurityOption | null;
-  initialSecurityCompany?: SecurityCompany;
+  initialAccountId?: number;
 }) {
   const notify = useNotify();
   const register = useRegisterBalance();
+  // 페이지 필터가 이미 불러 둔 목록이라 보통 캐시에서 바로 나온다
+  const { data: accounts } = useAccounts();
 
   const [security, setSecurity] = useState<SecurityOption | null>(initialSecurity);
-  const [securityCompany, setSecurityCompany] = useState<SecurityCompany | null>(
-    () => initialSecurityCompany ?? loadLastSecurityCompany(),
+  const [initial] = useState(() =>
+    initialRegisterAccount(initialAccountId, accounts, loadLastAccount()),
   );
+  const [securityCompany, setSecurityCompany] = useState<SecurityCompany | null>(
+    initial.securityCompany,
+  );
+  const [accountId, setAccountId] = useState<number | null>(initial.accountId);
+  const [companyTouched, setCompanyTouched] = useState(false);
+  // 그 증권사의 내 계좌 (없으면 등록할 때 일반 계좌가 새로 만들어진다)
+  const companyAccounts = accounts?.filter((a) => a.securityCompany === securityCompany);
+  const selectedAccount = companyAccounts?.find((a) => a.id === accountId);
+
+  // 계좌 목록이 늦게 오면 그때 처음 값을 다시 맞춘다 (직접 고르기 전까지)
+  useEffect(() => {
+    if (!accounts || companyTouched) return;
+    const next = initialRegisterAccount(initialAccountId, accounts, loadLastAccount());
+    if (next.securityCompany) setSecurityCompany(next.securityCompany);
+    setAccountId(next.accountId);
+  }, [accounts, companyTouched, initialAccountId]);
+
+  const changeCompany = (value: SecurityCompany | null) => {
+    setSecurityCompany(value);
+    setCompanyTouched(true);
+    setAccountId(defaultAccountId(value, accounts));
+  };
   // 추가 매수에서 증권사가 비어 있으면 증권사부터, 있으면 매수일부터 입력
   const [focusCompanyFirst] = useState(() => !!initialSecurity && !securityCompany);
   const [purchaseDate, setPurchaseDate] = useState<Dayjs | null>(
@@ -176,6 +203,7 @@ function RegisterPurchaseForm({
       {
         securityId: security.id,
         securityCompany,
+        accountId: selectedAccount?.id,
         purchaseDate: dateStr,
         amount,
         price,
@@ -184,8 +212,12 @@ function RegisterPurchaseForm({
       },
       {
         onSuccess: () => {
-          // 매수 등록·증권사 수정이 같은 값을 공유: 다음에 열 때 이 증권사가 미리 선택된다
-          saveLastSecurityCompany(securityCompany);
+          // 다음에 열 때 이 증권사·계좌가 미리 선택된다
+          saveLastAccount(
+            selectedAccount
+              ? { securityCompany, accountId: selectedAccount.id }
+              : { securityCompany },
+          );
           notify(`${security.name} 매수 내역을 등록했습니다.`);
           onClose();
         },
@@ -207,15 +239,40 @@ function RegisterPurchaseForm({
             />
           </Box>
 
-          <Box onKeyDown={onEnter(() => securityCompany && focusFirstField(dateBoxRef.current))}>
-            <SecurityCompanySelect
-              value={securityCompany}
-              onChange={setSecurityCompany}
-              required
-              autoFocus={focusCompanyFirst}
-              inputRef={securityCompanyRef}
-            />
-          </Box>
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            spacing={2}
+            onKeyDown={onEnter(() => securityCompany && focusFirstField(dateBoxRef.current))}
+          >
+            <Box sx={{ flex: 1 }}>
+              <SecurityCompanySelect
+                value={securityCompany}
+                onChange={changeCompany}
+                required
+                autoFocus={focusCompanyFirst}
+                inputRef={securityCompanyRef}
+              />
+            </Box>
+            {securityCompany && companyAccounts && companyAccounts.length > 0 && (
+              <Box sx={{ flex: 1 }}>
+                <AccountSelect
+                  value={accountId}
+                  onChange={(value) => {
+                    setAccountId(value);
+                    setCompanyTouched(true);
+                  }}
+                  accounts={companyAccounts}
+                  required
+                  fullWidth
+                />
+              </Box>
+            )}
+          </Stack>
+          {securityCompany && companyAccounts && companyAccounts.length === 0 && (
+            <Typography variant="caption" color="text.secondary" sx={{ mt: '8px !important' }}>
+              {securityCompanyLabel(securityCompany)} 계좌가 없어 등록할 때 일반 계좌가 새로 만들어집니다.
+            </Typography>
+          )}
 
           <Box ref={dateBoxRef} onKeyDown={onEnter(() => amountRef.current?.focus())}>
             <DatePicker
@@ -393,8 +450,12 @@ function RegisterPurchaseForm({
           {security && (
             <Stack spacing={1}>
               <ConfirmRow label="종목">{security.name}</ConfirmRow>
-              <ConfirmRow label="증권사">
-                {securityCompany ? securityCompanyLabel(securityCompany) : '-'}
+              <ConfirmRow label="계좌">
+                {selectedAccount
+                  ? accountLabel(selectedAccount, accounts)
+                  : securityCompany
+                    ? `${securityCompanyLabel(securityCompany)} · 일반 (새 계좌)`
+                    : '-'}
               </ConfirmRow>
               <ConfirmRow label="매수일">{dateStr ? formatDate(dateStr) : '-'}</ConfirmRow>
               <ConfirmRow label="수량">{formatQuantity(amount)}주</ConfirmRow>

@@ -27,7 +27,7 @@ import type { MonthlyBalanceMonth } from '../api/types';
 import { CHART_COLORS } from '../lib/chart';
 import { formatDate, formatKrw, formatKrwCompact, formatQuantity, formatRate, toNumber } from '../lib/format';
 import { MAX_MONTHS, monthsForDateRange, totalReturnRate } from '../lib/months';
-import { type SecurityCompany, securityDetailPath } from '../lib/securityCompany';
+import { securityDetailPath } from '../lib/account';
 import { EmptyState, ErrorAlert, Loading, ProfitText } from './common';
 import { CurrencyChip } from './SecuritySearch';
 
@@ -45,19 +45,19 @@ const dotMonth = (month: string) => dayjs(`${month}-01`).format('YYYY.MM');
 export function MonthlyTrendSection({
   from,
   to,
-  securityCompany,
+  accountId,
 }: {
   from: string;
   to: string;
-  /** 증권사 필터 (없으면 전체 증권사) */
-  securityCompany?: SecurityCompany;
+  /** 계좌 필터 (없으면 전체 계좌) */
+  accountId?: number;
 }) {
   const range = monthsForDateRange(from, to, dayjs().format('YYYY-MM-DD'));
   const { data, isLoading, error, refetch } = useMonthlyBalance(
     range?.from ?? '',
     range?.to ?? '',
     !!range,
-    securityCompany,
+    accountId,
   );
 
   const subheader = range
@@ -89,7 +89,7 @@ export function MonthlyTrendSection({
           <CardContent sx={{ pt: 0 }}>
             <TrendChart months={data.months} />
           </CardContent>
-          <MonthTable months={data.months} securityCompany={securityCompany} />
+          <MonthTable months={data.months} accountId={accountId} />
         </>
       )}
     </Card>
@@ -125,10 +125,10 @@ function TrendChart({ months }: { months: MonthlyBalanceMonth[] }) {
 
 function MonthTable({
   months,
-  securityCompany,
+  accountId,
 }: {
   months: MonthlyBalanceMonth[];
-  securityCompany?: SecurityCompany;
+  accountId?: number;
 }) {
   const [open, setOpen] = useState<string | null>(null);
   // 최근 달이 위로
@@ -183,7 +183,7 @@ function MonthTable({
                   <TableCell colSpan={7} sx={{ py: 0, ...(isOpen ? {} : { borderBottom: 'none' }) }}>
                     <Collapse in={isOpen} timeout="auto" unmountOnExit>
                       <Box sx={{ py: 1.5 }}>
-                        <ItemTable month={m} securityCompany={securityCompany} />
+                        <ItemTable month={m} accountId={accountId} />
                       </Box>
                     </Collapse>
                   </TableCell>
@@ -199,10 +199,10 @@ function MonthTable({
 
 function ItemTable({
   month,
-  securityCompany,
+  accountId,
 }: {
   month: MonthlyBalanceMonth;
-  securityCompany?: SecurityCompany;
+  accountId?: number;
 }) {
   if (month.items.length === 0) {
     return (
@@ -230,7 +230,7 @@ function ItemTable({
               <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
                 <Link
                   component={RouterLink}
-                  to={securityDetailPath(i.securityId, securityCompany)}
+                  to={securityDetailPath(i.securityId, accountId)}
                   underline="hover"
                 >
                   {i.name}

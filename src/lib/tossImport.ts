@@ -1,4 +1,4 @@
-import type { TossTransaction } from '../api/types';
+import type { TossTransaction, TossTransferKey } from '../api/types';
 
 /** 백엔드 Express JSON body 한도 (main.ts의 1mb) */
 export const TOSS_BODY_LIMIT_BYTES = 1024 * 1024;
@@ -182,3 +182,17 @@ export const summarizeTossTransactions = (list: TossTransaction[]): TossSummary 
 /** 요청 body의 UTF-8 바이트 수 */
 export const tossRequestBodySize = (transactions: TossTransaction[]): number =>
   new Blob([JSON.stringify({ transactionList: transactions })]).size;
+
+/** 출고 키를 비교·React key로 쓰는 문자열 (서버가 준 키를 그대로 쓰므로 정규화하지 않는다) */
+export const tossTransferKeyId = (key: TossTransferKey): string =>
+  `${key.isinCode}|${key.settlementDate}|${key.quantity}|${key.index}`;
+
+/** 이미 확인한 출고에 새로 고른 출고를 더한다 (같은 키는 한 번만) */
+export const mergeTransferKeys = (
+  confirmed: readonly TossTransferKey[],
+  added: readonly TossTransferKey[],
+): TossTransferKey[] => {
+  const map = new Map<string, TossTransferKey>();
+  for (const key of [...confirmed, ...added]) map.set(tossTransferKeyId(key), key);
+  return Array.from(map.values());
+};

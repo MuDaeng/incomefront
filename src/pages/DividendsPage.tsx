@@ -23,10 +23,9 @@ import {
 import { BarChart } from '@mui/x-charts/BarChart';
 import dayjs from 'dayjs';
 import { useMemo, useState } from 'react';
-import { useDividendHistory, useSecurityCompanies } from '../api/queries';
-import { SecurityCompanySelect } from '../components/SecurityCompanySelect';
-import { filterCompanyOptions } from '../lib/securityCompany';
-import { useSecurityCompanyParam } from '../lib/useSecurityCompanyParam';
+import { useDividendHistory, useAccounts } from '../api/queries';
+import { AccountSelect } from '../components/AccountSelect';
+import { useAccountParam } from '../lib/useAccountParam';
 import type { DividendItem, MonthlyDividend } from '../api/types';
 import {
   EmptyState,
@@ -79,13 +78,12 @@ const monthsBetween = (from: string, to: string): string[] => {
 export function DividendsPage() {
   const [presetKey, setPresetKey] = useState<string | null>(PRESETS.thisYear.key);
   const [range, setRange] = useState<DateRange>(PRESETS.thisYear.range);
-  const [securityCompany, setSecurityCompany] = useSecurityCompanyParam();
-  // 필터 목록은 매수 기록이 있는 증권사만
-  const { data: companies } = useSecurityCompanies();
+  const [accountId, setAccountId] = useAccountParam();
+  const { data: accounts } = useAccounts();
   const { data, isLoading, isFetching, error, refetch } = useDividendHistory(
     range.from,
     range.to,
-    securityCompany,
+    accountId,
   );
 
   const chartMonths = useMemo(() => {
@@ -120,13 +118,13 @@ export function DividendsPage() {
         title="배당금"
         subtitle="배당락일 전날 보유 수량 × 주당 배당금 (세전) · 미국 배당은 지급일 환율로 원화 환산"
         action={
-          <SecurityCompanySelect
+          <AccountSelect
             allowAll
             size="small"
-            width={190}
-            value={securityCompany ?? null}
-            onChange={setSecurityCompany}
-            companies={filterCompanyOptions(companies, securityCompany)}
+            width={210}
+            value={accountId ?? null}
+            onChange={setAccountId}
+            accounts={accounts}
           />
         }
       />
@@ -233,7 +231,7 @@ export function DividendsPage() {
         </>
       ) : null}
 
-      <DividendMetricsSection securityCompany={securityCompany} />
+      <DividendMetricsSection accountId={accountId} />
     </>
   );
 }

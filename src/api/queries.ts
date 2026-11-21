@@ -7,11 +7,14 @@ import {
 import type { SecurityCompany } from '../lib/securityCompany';
 import { request } from './client';
 import type {
+  Account,
+  AccountListResponse,
   BatchHistoryItem,
   BatchStatus,
   BulkRegisterTossRequest,
   BulkRegisterTossResponse,
   BulkSellBalanceRequest,
+  CreateAccountRequest,
   DailyPriceResponse,
   DeletePurchaseRequest,
   DividendHistoryResponse,
@@ -22,12 +25,11 @@ import type {
   PriceSearchItem,
   PurchaseHistoryResponse,
   RegisterBalanceRequest,
-  SecurityCompanyListResponse,
   SecurityMonthlyDividendResponse,
   SecuritySearchItem,
   SellBalanceRequest,
   UpdateExchangeRateRequest,
-  UpdateSecurityCompanyRequest,
+  UpdatePurchaseAccountRequest,
   User,
 } from './types';
 
@@ -37,19 +39,21 @@ export const fetchMe = () => request<User>('/auth/me');
 const BALANCE_KEY = ['balance'] as const;
 
 export const queryKeys = {
-  integratedBalance: (securityCompany?: SecurityCompany) =>
-    [...BALANCE_KEY, 'integrated', securityCompany ?? null] as const,
-  purchases: (securityId: string, securityCompany?: SecurityCompany) =>
-    [...BALANCE_KEY, 'purchases', securityId, securityCompany ?? null] as const,
-  dividends: (from?: string, to?: string, securityCompany?: SecurityCompany) =>
-    [...BALANCE_KEY, 'dividends', from ?? null, to ?? null, securityCompany ?? null] as const,
-  returns: (from: string, to: string, securityCompany?: SecurityCompany) =>
-    [...BALANCE_KEY, 'returns', from, to, securityCompany ?? null] as const,
-  monthly: (from: string, to: string, securityCompany?: SecurityCompany) =>
-    [...BALANCE_KEY, 'monthly', from, to, securityCompany ?? null] as const,
-  dividendMetrics: (securityCompany?: SecurityCompany) =>
-    [...BALANCE_KEY, 'dividend-metrics', securityCompany ?? null] as const,
-  securityCompanies: [...BALANCE_KEY, 'security-companies'] as const,
+  integratedBalance: (accountId?: number) =>
+    [...BALANCE_KEY, 'integrated', accountId ?? null] as const,
+  purchases: (securityId: string, accountId?: number) =>
+    [...BALANCE_KEY, 'purchases', securityId, accountId ?? null] as const,
+  dividends: (from?: string, to?: string, accountId?: number) =>
+    [...BALANCE_KEY, 'dividends', from ?? null, to ?? null, accountId ?? null] as const,
+  returns: (from: string, to: string, accountId?: number) =>
+    [...BALANCE_KEY, 'returns', from, to, accountId ?? null] as const,
+  monthly: (from: string, to: string, accountId?: number) =>
+    [...BALANCE_KEY, 'monthly', from, to, accountId ?? null] as const,
+  dividendMetrics: (accountId?: number) =>
+    [...BALANCE_KEY, 'dividend-metrics', accountId ?? null] as const,
+  /** 내 계좌 목록. 매수 등록·일괄등록이 계좌를 새로 만들 수 있어 balance prefix 아래에 둔다 */
+  accounts: (securityCompany?: SecurityCompany) =>
+    [...BALANCE_KEY, 'accounts', securityCompany ?? null] as const,
   securitySearch: (keyword: string) => ['securities', keyword] as const,
   dailyPrices: (securityId: string, from?: string, to?: string) =>
     ['daily-prices', securityId, from ?? null, to ?? null] as const,
@@ -62,63 +66,63 @@ export const queryKeys = {
   priceSearches: ['admin', 'security-searches', 'price'] as const,
 };
 
-/** 통합잔고. securityCompany를 주면 그 증권사 매수분만, 없으면 전체 */
-export const useIntegratedBalance = (securityCompany?: SecurityCompany) =>
+/** 통합잔고. accountId를 주면 그 계좌 매수분만, 없으면 전체 */
+export const useIntegratedBalance = (accountId?: number) =>
   useQuery({
-    queryKey: queryKeys.integratedBalance(securityCompany),
+    queryKey: queryKeys.integratedBalance(accountId),
     queryFn: ({ signal }) =>
       request<IntegratedBalanceResponse>('/balance', {
-        query: { securityCompany },
+        query: { accountId },
         signal,
       }),
     // 필터를 바꿀 때 화면 전체가 로딩으로 바뀌지 않도록 이전 결과를 유지
     placeholderData: keepPreviousData,
   });
 
-/** 종목 매수 내역. securityCompany를 주면 그 증권사 매수분만, 없으면 전체 */
-export const usePurchases = (securityId: string, securityCompany?: SecurityCompany) =>
+/** 종목 매수 내역. accountId를 주면 그 계좌 매수분만, 없으면 전체 */
+export const usePurchases = (securityId: string, accountId?: number) =>
   useQuery({
-    queryKey: queryKeys.purchases(securityId, securityCompany),
+    queryKey: queryKeys.purchases(securityId, accountId),
     queryFn: ({ signal }) =>
       request<PurchaseHistoryResponse>('/balance/purchases', {
-        query: { securityId, securityCompany },
+        query: { securityId, accountId },
         signal,
       }),
     enabled: !!securityId,
     placeholderData: keepPreviousData,
   });
 
-/** 배당금 내역. securityCompany를 주면 그 증권사 보유 수량으로만 계산 */
-export const useDividendHistory = (from?: string, to?: string, securityCompany?: SecurityCompany) =>
+/** 배당금 내역. accountId를 주면 그 계좌 보유 수량으로만 계산 */
+export const useDividendHistory = (from?: string, to?: string, accountId?: number) =>
   useQuery({
-    queryKey: queryKeys.dividends(from, to, securityCompany),
+    queryKey: queryKeys.dividends(from, to, accountId),
     queryFn: ({ signal }) =>
       request<DividendHistoryResponse>('/balance/dividends', {
-        query: { from, to, securityCompany },
+        query: { from, to, accountId },
         signal,
       }),
     placeholderData: keepPreviousData,
   });
 
-/** 현재 보유 종목의 배당 지표(예상 연배당·YOC·현재 배당률·성장률, 세전). securityCompany를 주면 그 증권사 보유분만 */
-export const useDividendMetrics = (securityCompany?: SecurityCompany) =>
+/** 현재 보유 종목의 배당 지표(예상 연배당·YOC·현재 배당률·성장률, 세전). accountId를 주면 그 계좌 보유분만 */
+export const useDividendMetrics = (accountId?: number) =>
   useQuery({
-    queryKey: queryKeys.dividendMetrics(securityCompany),
+    queryKey: queryKeys.dividendMetrics(accountId),
     queryFn: ({ signal }) =>
       request<DividendMetricsResponse>('/balance/dividend-metrics', {
-        query: { securityCompany },
+        query: { accountId },
         signal,
       }),
     placeholderData: keepPreviousData,
   });
 
-/** 기간 수익률. securityCompany를 주면 그 증권사 매수분·보유 수량으로만 계산 */
-export const usePeriodReturn = (from: string, to: string, securityCompany?: SecurityCompany) =>
+/** 기간 수익률. accountId를 주면 그 계좌 매수분·보유 수량으로만 계산 */
+export const usePeriodReturn = (from: string, to: string, accountId?: number) =>
   useQuery({
-    queryKey: queryKeys.returns(from, to, securityCompany),
+    queryKey: queryKeys.returns(from, to, accountId),
     queryFn: ({ signal }) =>
       request<PeriodReturnResponse>('/balance/returns', {
-        query: { from, to, securityCompany },
+        query: { from, to, accountId },
         signal,
       }),
     placeholderData: keepPreviousData,
@@ -129,14 +133,14 @@ export const useMonthlyBalance = (
   from: string,
   to: string,
   enabled = true,
-  securityCompany?: SecurityCompany,
+  accountId?: number,
 ) =>
   useQuery({
-    queryKey: queryKeys.monthly(from, to, securityCompany),
+    queryKey: queryKeys.monthly(from, to, accountId),
     enabled,
     queryFn: ({ signal }) =>
       request<MonthlyBalanceResponse>('/balance/monthly', {
-        query: { from, to, securityCompany },
+        query: { from, to, accountId },
         signal,
       }),
     placeholderData: keepPreviousData,
@@ -202,7 +206,7 @@ export const useSellBalance = () => {
   });
 };
 
-/** 증권사별 일괄매도. 보유 수량이 모자라면 백엔드가 400을 주고 아무것도 매도하지 않는다 */
+/** 계좌별 일괄매도. 보유 수량이 모자라면 백엔드가 400을 주고 아무것도 매도하지 않는다 */
 export const useBulkSellBalance = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -213,8 +217,8 @@ export const useBulkSellBalance = () => {
 };
 
 /**
- * Toss 거래내역으로 TOSS 증권사 잔고 일괄 재등록. 기존 TOSS 매수분을 모두 지우고 다시 등록하며,
- * 매도할 보유 수량이 모자라면 400으로 전체가 롤백된다
+ * Toss 거래내역으로 Toss 계좌 잔고 일괄 재등록. 그 계좌의 기존 매수분을 모두 지우고 다시 등록하며,
+ * 매도할 보유 수량이 모자라면 400으로 전체가 롤백된다. 출고는 confirmedTransfersOut에 없으면 빌려주기로 본다
  */
 export const useBulkRegisterToss = () => {
   const queryClient = useQueryClient();
@@ -251,24 +255,54 @@ export const useUpdateExchangeRate = () => {
   });
 };
 
-/** 매수분 하나의 증권사 수정. 증권사 필터 결과가 바뀌므로 balance 전체를 무효화한다 */
-export const useUpdateSecurityCompany = () => {
+/** 매수분 하나를 내 다른 계좌로 이동 (매도분도 가능). 계좌 필터 결과가 바뀌므로 balance 전체를 무효화한다 */
+export const useUpdatePurchaseAccount = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (body: UpdateSecurityCompanyRequest) =>
-      request('/balance/purchases/security-company', { method: 'PATCH', body }),
+    mutationFn: (body: UpdatePurchaseAccountRequest) =>
+      request('/balance/purchases/account', { method: 'PATCH', body }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: BALANCE_KEY }),
   });
 };
 
-/** 매수 기록이 있는 증권사 목록 (필터 콤보박스용). balance 키 아래라 등록·삭제·증권사 수정 뒤 함께 갱신 */
-export const useSecurityCompanies = () =>
+/** 내 계좌 목록 (id 순). securityCompany를 주면 그 증권사 계좌만 */
+export const useAccounts = (securityCompany?: SecurityCompany, enabled = true) =>
   useQuery({
-    queryKey: queryKeys.securityCompanies,
+    queryKey: queryKeys.accounts(securityCompany),
     queryFn: ({ signal }) =>
-      request<SecurityCompanyListResponse>('/balance/security-companies', { signal }),
-    select: (data) => data.securityCompanies,
+      request<AccountListResponse>('/accounts', { query: { securityCompany }, signal }),
+    select: (data) => data.accounts,
+    enabled,
   });
+
+/** 계좌 생성 (accountType 생략 = 일반) */
+export const useCreateAccount = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: CreateAccountRequest) =>
+      request<Account>('/accounts', { method: 'POST', body }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: BALANCE_KEY }),
+  });
+};
+
+/** 계좌 타입 변경. 잔고 응답의 accountAmounts에도 타입이 있어 balance 전체를 무효화한다 */
+export const useUpdateAccountType = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, accountType }: Pick<Account, 'id' | 'accountType'>) =>
+      request<Account>(`/accounts/${id}/type`, { method: 'PATCH', body: { accountType } }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: BALANCE_KEY }),
+  });
+};
+
+/** 계좌 삭제 (204). 매수 내역(매도분 포함)이 남아 있으면 400 */
+export const useDeleteAccount = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => request(`/accounts/${id}`, { method: 'DELETE' }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: BALANCE_KEY }),
+  });
+};
 
 /** GET /admin/batch-histories (관리자 전용, 아니면 403). name·status 생략 = 전체, limit 1~100 */
 export const useBatchHistories = (params: {

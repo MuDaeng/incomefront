@@ -1,11 +1,13 @@
 import type { TossTransaction } from '../../src/api/types';
 import {
+  mergeTransferKeys,
   parseTossTransactions,
   summarizeTossTransactions,
   tossRequestBodySize,
   tossSkipReason,
   tossTradeDate,
   tossTransactionKind,
+  tossTransferKeyId,
 } from '../../src/lib/tossImport';
 
 const raw = {
@@ -157,5 +159,20 @@ describe('tossRequestBodySize', () => {
   it('요청 body 바이트 수', () => {
     const list = [tx()];
     expect(tossRequestBodySize(list)).toBe(JSON.stringify({ transactionList: list }).length);
+  });
+});
+
+describe('출고 키', () => {
+  const a = { isinCode: 'US0000000001', settlementDate: '2026-11-03', quantity: '10.000000', index: 0 };
+  const b = { ...a, index: 1 };
+
+  it('키 문자열은 네 필드를 모두 담는다', () => {
+    expect(tossTransferKeyId(a)).toBe('US0000000001|2026-11-03|10.000000|0');
+    expect(tossTransferKeyId(a)).not.toBe(tossTransferKeyId(b));
+  });
+
+  it('확인한 출고에 새 출고를 더하고 같은 키는 한 번만', () => {
+    expect(mergeTransferKeys([a], [a, b])).toEqual([a, b]);
+    expect(mergeTransferKeys([], [])).toEqual([]);
   });
 });

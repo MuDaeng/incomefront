@@ -31,10 +31,11 @@ import {
   useDailyPrices,
   useDividendMetrics,
   usePurchases,
-  useSecurityCompanies,
+  useAccounts,
   useSecurityDividends,
 } from '../api/queries';
-import type { PurchaseHistoryItem, SecurityInfo } from '../api/types';
+import type { Account, PurchaseHistoryItem, SecurityInfo } from '../api/types';
+import { AccountSelect } from '../components/AccountSelect';
 import {
   EmptyState,
   ErrorAlert,
@@ -46,26 +47,18 @@ import {
 import { useLayout } from '../components/Layout';
 import { DeletePurchaseDialog } from '../components/DeletePurchaseDialog';
 import { EditExchangeRateDialog } from '../components/EditExchangeRateDialog';
-import { EditSecurityCompanyDialog } from '../components/EditSecurityCompanyDialog';
+import { MovePurchaseAccountDialog } from '../components/MovePurchaseAccountDialog';
 import { CurrencyChip, SymbolChip } from '../components/SecuritySearch';
-import {
-  CompanyAmountChips,
-  SecurityCompanyChip,
-  SecurityCompanySelect,
-} from '../components/SecurityCompanySelect';
+import { AccountAmountChips, AccountChip } from '../components/SecurityCompanySelect';
 import { SellDialog } from '../components/SellDialog';
 import { BulkSellDialog } from '../components/BulkSellDialog';
 import { CandleChart } from '../components/CandleChart';
 import { type CandleInterval, toCandles, weekStart } from '../lib/candles';
 import { KRW_COLOR, USD_COLOR } from '../lib/chart';
 import { fillDividendMonths, monthTickLabel, trailingYearDividend } from '../lib/dividends';
-import {
-  filterCompanyOptions,
-  type SecurityCompany,
-  securityCompanyLabel,
-} from '../lib/securityCompany';
+import { accountLabel } from '../lib/account';
 import { findMetricsItem } from '../lib/dividendMetrics';
-import { useSecurityCompanyParam } from '../lib/useSecurityCompanyParam';
+import { useAccountParam } from '../lib/useAccountParam';
 import {
   formatDate,
   formatExchangeRate,
@@ -82,16 +75,15 @@ import {
 export function SecurityDetailPage() {
   const { securityId = '' } = useParams();
   const { openRegister } = useLayout();
-  // 증권사 필터는 URL 쿼리(?securityCompany=)에 둔다 (통합잔고에서 넘어올 때도 유지)
-  const [securityCompany, setSecurityCompany] = useSecurityCompanyParam();
-  const { data, isLoading, error, refetch } = usePurchases(securityId, securityCompany);
-  // 필터 목록은 매수 기록이 있는 증권사만
-  const { data: companies } = useSecurityCompanies();
+  // 계좌 필터는 URL 쿼리(?accountId=)에 둔다 (통합잔고에서 넘어올 때도 유지)
+  const [accountId, setAccountId] = useAccountParam();
+  const { data, isLoading, error, refetch } = usePurchases(securityId, accountId);
+  const { data: accounts } = useAccounts();
   const [selling, setSelling] = useState<PurchaseHistoryItem | null>(null);
   const [bulkSelling, setBulkSelling] = useState(false);
   const [deleting, setDeleting] = useState<PurchaseHistoryItem | null>(null);
   const [editingRate, setEditingRate] = useState<PurchaseHistoryItem | null>(null);
-  const [editingCompany, setEditingCompany] = useState<PurchaseHistoryItem | null>(null);
+  const [movingAccount, setMovingAccount] = useState<PurchaseHistoryItem | null>(null);
   const navigate = useNavigate();
 
   const stats = useMemo(() => {
@@ -119,8 +111,9 @@ export function SecurityDetailPage() {
   if (!data) return null;
 
   const { security } = data;
-  // 증권사 필터 중에는 다른 증권사 매수분이 남아 있을 수 있어 "마지막 매수분"으로 보지 않는다
-  const isLastLot = !securityCompany && data.items.length === 1;
+  // 계좌 필터 중에는 다른 계좌 매수분이 남아 있을 수 있어 "마지막 매수분"으로 보지 않는다
+  const isLastLot = !accountId && data.items.length === 1;
+  const selectedAccount = accounts?.find((a) => a.id === accountId);
 
   return (
     <>
@@ -143,7 +136,7 @@ export function SecurityDetailPage() {
         <Button
           variant="contained"
           startIcon={<Add />}
-          onClick={() => openRegister(security, securityCompany)}
+          onClick={() => openRegister(security, accountId)}
           disableFocusRipple
           sx={staticFocusSx}
         >
@@ -153,7 +146,7 @@ export function SecurityDetailPage() {
           variant="outlined"
           color="error"
           onClick={() => setBulkSelling(true)}
-          disabled={data.companyAmounts.length === 0}
+          disabled={data.accountAmounts.length === 0}
         >
           일괄매도
         </Button>
@@ -165,7 +158,11 @@ export function SecurityDetailPage() {
             label="보유 수량"
             value={`${formatQuantity(data.amount)}주`}
             sub={
-              <CompanyAmountChips companyAmounts={data.companyAmounts} formatAmount={formatQuantity} />
+              <AccountAmountChips
+                accountAmounts={data.accountAmounts}
+                accounts={accounts}
+                formatAmount={formatQuantity}
+              />
             }
           />
         </Grid>
@@ -200,20 +197,20 @@ export function SecurityDetailPage() {
 
       <PriceChartCard security={security} average={stats.average} />
 
-      <DividendHistoryCard security={security} securityCompany={securityCompany} />
+      <DividendHistoryCard security={security} accountId={accountId} />
 
       <Card sx={{ mt: 2 }}>
         <CardHeader
           title="매수 내역"
           slotProps={{ title: { variant: 'h6' } }}
           action={
-            <SecurityCompanySelect
+            <AccountSelect
               allowAll
               size="small"
-              width={190}
-              value={securityCompany ?? null}
-              onChange={setSecurityCompany}
-              companies={filterCompanyOptions(companies, securityCompany)}
+              width={210}
+              value={accountId ?? null}
+              onChange={setAccountId}
+              accounts={accounts}
             />
           }
           sx={{ flexWrap: 'wrap', gap: 1 }}
@@ -221,8 +218,8 @@ export function SecurityDetailPage() {
         {data.items.length === 0 ? (
           <EmptyState
             title={
-              securityCompany
-                ? `${securityCompanyLabel(securityCompany)} 매수 내역이 없습니다.`
+              accountId
+                ? `${selectedAccount ? accountLabel(selectedAccount, accounts) : '이 계좌'} 매수 내역이 없습니다.`
                 : '매수 내역이 없습니다.'
             }
           />
@@ -233,7 +230,8 @@ export function SecurityDetailPage() {
             onSell={setSelling}
             onDelete={setDeleting}
             onEditRate={setEditingRate}
-            onEditCompany={setEditingCompany}
+            onMoveAccount={setMovingAccount}
+            accounts={accounts}
           />
         )}
       </Card>
@@ -242,14 +240,15 @@ export function SecurityDetailPage() {
       <BulkSellDialog
         open={bulkSelling}
         security={security}
-        companyAmounts={data.companyAmounts}
-        initialCompany={securityCompany}
+        accountAmounts={data.accountAmounts}
+        accounts={accounts}
+        initialAccountId={accountId}
         onClose={() => setBulkSelling(false)}
       />
-      <EditSecurityCompanyDialog
+      <MovePurchaseAccountDialog
         security={security}
-        purchase={editingCompany}
-        onClose={() => setEditingCompany(null)}
+        purchase={movingAccount}
+        onClose={() => setMovingAccount(null)}
       />
       <EditExchangeRateDialog
         security={security}
@@ -276,14 +275,16 @@ function PurchaseTable({
   onSell,
   onDelete,
   onEditRate,
-  onEditCompany,
+  onMoveAccount,
+  accounts,
 }: {
   security: SecurityInfo;
   items: PurchaseHistoryItem[];
   onSell: (item: PurchaseHistoryItem) => void;
   onDelete: (item: PurchaseHistoryItem) => void;
   onEditRate: (item: PurchaseHistoryItem) => void;
-  onEditCompany: (item: PurchaseHistoryItem) => void;
+  onMoveAccount: (item: PurchaseHistoryItem) => void;
+  accounts?: readonly Account[];
 }) {
   const isUsd = security.currency === 'USD';
   return (
@@ -292,7 +293,7 @@ function PurchaseTable({
         <TableHead>
           <TableRow>
             <TableCell>매수일</TableCell>
-            <TableCell>증권사</TableCell>
+            <TableCell>계좌</TableCell>
             <TableCell align="right">수량</TableCell>
             <TableCell align="right">매수가</TableCell>
             <TableCell align="right">매수금액</TableCell>
@@ -311,17 +312,13 @@ function PurchaseTable({
                 </Typography>
               </TableCell>
               <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                {/* 표에서는 짧은 이름(토스, NH 등), 마우스를 올리면 정식 이름 */}
-                <Tooltip title={securityCompanyLabel(item.securityCompany)}>
-                  <span>
-                    <SecurityCompanyChip value={item.securityCompany} />
-                  </span>
-                </Tooltip>
-                <Tooltip title="증권사 수정">
+                {/* 표에서는 짧은 이름(토스, 토스 ISA 등), 마우스를 올리면 정식 이름 */}
+                <AccountChip account={item} accounts={accounts} />
+                <Tooltip title="계좌 이동">
                   <IconButton
                     size="small"
-                    aria-label="증권사 수정"
-                    onClick={() => onEditCompany(item)}
+                    aria-label="계좌 이동"
+                    onClick={() => onMoveAccount(item)}
                     sx={{ ml: 0.25 }}
                   >
                     <EditOutlined sx={{ fontSize: 16 }} />
@@ -411,14 +408,14 @@ const DIVIDEND_CHART_MONTHS = 36;
 
 function DividendHistoryCard({
   security,
-  securityCompany,
+  accountId,
 }: {
   security: SecurityInfo;
-  securityCompany?: SecurityCompany;
+  accountId?: number;
 }) {
   const { data, isLoading, error } = useSecurityDividends(security.id);
   // 보유 기준 지표 (현재 보유하지 않으면 없음)
-  const { data: metricsData } = useDividendMetrics(securityCompany);
+  const { data: metricsData } = useDividendMetrics(accountId);
   const metrics = findMetricsItem(metricsData, security.id);
   const months = useMemo(() => data?.months ?? [], [data]);
   const chartMonths = useMemo(() => fillDividendMonths(months, DIVIDEND_CHART_MONTHS), [months]);

@@ -1,3 +1,4 @@
+import AccountBalanceOutlined from '@mui/icons-material/AccountBalanceOutlined';
 import AccountBalanceWalletOutlined from '@mui/icons-material/AccountBalanceWalletOutlined';
 import Add from '@mui/icons-material/Add';
 import DarkModeOutlined from '@mui/icons-material/DarkModeOutlined';
@@ -28,7 +29,6 @@ import { useCallback, useMemo, useState } from 'react';
 import { NavLink, Outlet, useOutletContext } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { RegisterPurchaseDialog } from './RegisterPurchaseDialog';
-import type { SecurityCompany } from '../lib/securityCompany';
 import type { SecurityOption } from './SecuritySearch';
 
 const DRAWER_WIDTH = 232;
@@ -37,6 +37,7 @@ const NAV = [
   { to: '/', label: '통합잔고', icon: <AccountBalanceWalletOutlined /> },
   { to: '/dividends', label: '배당금', icon: <PaidOutlined /> },
   { to: '/returns', label: '기간 수익률', icon: <ShowChart /> },
+  { to: '/accounts', label: '계좌 관리', icon: <AccountBalanceOutlined /> },
 ];
 
 /** access token의 rules에 admin이 있을 때만 보이는 메뉴 (페이지 자체도 서버가 403으로 막는다) */
@@ -46,8 +47,8 @@ const ADMIN_NAV = [
 ];
 
 interface LayoutContext {
-  /** 매수 등록 창 열기. security를 주면 추가 매수(종목 고정), securityCompany는 증권사 처음 값 */
-  openRegister: (security?: SecurityOption, securityCompany?: SecurityCompany) => void;
+  /** 매수 등록 창 열기. security를 주면 추가 매수(종목 고정), accountId는 계좌 처음 값 */
+  openRegister: (security?: SecurityOption, accountId?: number) => void;
 }
 
 export const useLayout = () => useOutletContext<LayoutContext>();
@@ -59,12 +60,12 @@ export function Layout() {
   const [register, setRegister] = useState<{
     open: boolean;
     security: SecurityOption | null;
-    securityCompany?: SecurityCompany;
+    accountId?: number;
   }>({ open: false, security: null });
 
   const openRegister = useCallback(
-    (security?: SecurityOption, securityCompany?: SecurityCompany) =>
-      setRegister({ open: true, security: security ?? null, securityCompany }),
+    (security?: SecurityOption, accountId?: number) =>
+      setRegister({ open: true, security: security ?? null, accountId }),
     [],
   );
   const context = useMemo<LayoutContext>(() => ({ openRegister }), [openRegister]);
@@ -215,7 +216,7 @@ export function Layout() {
       <RegisterPurchaseDialog
         open={register.open}
         initialSecurity={register.security}
-        initialSecurityCompany={register.securityCompany}
+        initialAccountId={register.accountId}
         onClose={() => setRegister((s) => ({ ...s, open: false }))}
       />
     </Box>
