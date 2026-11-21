@@ -53,6 +53,10 @@
   "jest": {
     "testMatch": [
       "<rootDir>/test/**/*.{spec,test}.{ts,tsx}"
-    ]
+    ],
+    "moduleNameMapper": {
+      "^@mui/x-charts/(.*)$": "<rootDir>/test/mocks/xCharts.tsx",
+      "^react-router/dom$": "<rootDir>/node_modules/react-router/dist/development/dom-export.js"
+    }
   }
 }
