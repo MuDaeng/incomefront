@@ -18,6 +18,7 @@ import {
 import { ApiError } from './api/client';
 import { AuthProvider, CALLBACK_PATH, useAuth } from './auth/AuthProvider';
 import { EmptyState, Loading } from './components/common';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { Layout } from './components/Layout';
 import { NotifierProvider } from './components/Notifier';
 import { AccountsPage } from './pages/AccountsPage';
@@ -71,37 +72,39 @@ export default function App() {
   return (
     <ThemeProvider theme={theme} defaultMode="system">
       <CssBaseline enableColorScheme />
-      <LocalizationProvider
-        dateAdapter={AdapterDayjs}
-        adapterLocale="ko"
-        localeText={pickersKoKR.components.MuiLocalizationProvider.defaultProps.localeText}
-      >
-        <QueryClientProvider client={queryClient}>
-          <NotifierProvider>
-            <BrowserRouter>
-              <AuthProvider>
-                <Routes>
-                  <Route path="/login" element={<LoginPage />} />
-                  <Route path={CALLBACK_PATH} element={<AuthCallbackPage />} />
-                  <Route element={<RequireAuth />}>
-                    <Route element={<Layout />}>
-                      <Route index element={<DashboardPage />} />
-                      <Route path="securities/:securityId" element={<SecurityDetailPage />} />
-                      <Route path="dividends" element={<DividendsPage />} />
-                      <Route path="returns" element={<ReturnsPage />} />
-                      <Route path="accounts" element={<AccountsPage />} />
-                      <Route path="toss-import" element={<TossImportPage />} />
-                      <Route path="admin/batches" element={<AdminBatchPage />} />
-                      <Route path="admin/price-searches" element={<AdminPriceSearchPage />} />
-                      <Route path="*" element={<NotFound />} />
+      <ErrorBoundary variant="app">
+        <LocalizationProvider
+          dateAdapter={AdapterDayjs}
+          adapterLocale="ko"
+          localeText={pickersKoKR.components.MuiLocalizationProvider.defaultProps.localeText}
+        >
+          <QueryClientProvider client={queryClient}>
+            <NotifierProvider>
+              <BrowserRouter>
+                <AuthProvider>
+                  <Routes>
+                    <Route path="/login" element={<LoginPage />} />
+                    <Route path={CALLBACK_PATH} element={<AuthCallbackPage />} />
+                    <Route element={<RequireAuth />}>
+                      <Route element={<Layout />}>
+                        <Route index element={<DashboardPage />} />
+                        <Route path="securities/:securityId" element={<SecurityDetailPage />} />
+                        <Route path="dividends" element={<DividendsPage />} />
+                        <Route path="returns" element={<ReturnsPage />} />
+                        <Route path="accounts" element={<AccountsPage />} />
+                        <Route path="toss-import" element={<TossImportPage />} />
+                        <Route path="admin/batches" element={<AdminBatchPage />} />
+                        <Route path="admin/price-searches" element={<AdminPriceSearchPage />} />
+                        <Route path="*" element={<NotFound />} />
+                      </Route>
                     </Route>
-                  </Route>
-                </Routes>
-              </AuthProvider>
-            </BrowserRouter>
-          </NotifierProvider>
-        </QueryClientProvider>
-      </LocalizationProvider>
+                  </Routes>
+                </AuthProvider>
+              </BrowserRouter>
+            </NotifierProvider>
+          </QueryClientProvider>
+        </LocalizationProvider>
+      </ErrorBoundary>
     </ThemeProvider>
   );
 }

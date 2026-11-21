@@ -26,8 +26,9 @@ import {
   useColorScheme,
 } from '@mui/material';
 import { useCallback, useMemo, useState } from 'react';
-import { NavLink, Outlet, useOutletContext } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useOutletContext } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
+import { ErrorBoundary } from './ErrorBoundary';
 import { RegisterPurchaseDialog } from './RegisterPurchaseDialog';
 import type { SecurityOption } from './SecuritySearch';
 
@@ -55,6 +56,7 @@ export const useLayout = () => useOutletContext<LayoutContext>();
 
 export function Layout() {
   const { logout, isAdmin } = useAuth();
+  const location = useLocation();
   const { mode, systemMode, setMode } = useColorScheme();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [register, setRegister] = useState<{
@@ -210,7 +212,10 @@ export function Layout() {
         sx={{ flex: 1, minWidth: 0, px: { xs: 2, sm: 3, lg: 4 }, py: 3, maxWidth: 1400, mx: 'auto' }}
       >
         <Toolbar />
-        <Outlet context={context} />
+        {/* 페이지에서 렌더링 오류가 나도 메뉴는 남기고, 다른 페이지로 가면 오류를 지운다 */}
+        <ErrorBoundary resetKey={location.pathname}>
+          <Outlet context={context} />
+        </ErrorBoundary>
       </Box>
 
       <RegisterPurchaseDialog
