@@ -401,6 +401,12 @@ export interface MonthlyDividend {
   items: DividendItem[];
 }
 
+/**
+ * 배당 성장률 계산 방식. TOTAL: 12개월 합끼리, PER_PAYMENT: 회당 평균끼리
+ * (KRW 종목의 첫 현금배당이 직전 12개월 안이고 직전 지급 횟수가 최근보다 적은 경우 = 상장 1년 남짓)
+ */
+export type GrowthBasis = 'TOTAL' | 'PER_PAYMENT';
+
 /** GET /balance/dividend-metrics 종목별 배당 지표 (세전). 비율은 % 소수 2자리 */
 export interface DividendMetricsItem {
   securityId: string;
@@ -415,8 +421,12 @@ export interface DividendMetricsItem {
   paymentCount: number;
   /** 그 직전 12개월 주당 배당 합 (종목 통화) */
   previousPerShare: string;
-  /** 배당 성장률(%) = 최근 12개월 ÷ 직전 12개월 − 1. 직전 배당이 없으면 null */
+  /** 직전 12개월 지급 횟수 */
+  previousPaymentCount: number;
+  /** 배당 성장률(%) = 최근 12개월 ÷ 직전 12개월 − 1 (growthBasis가 PER_PAYMENT면 회당 평균끼리). 직전 배당이 없으면 null */
   growthRate: string | null;
+  /** 성장률 계산 방식 */
+  growthBasis: GrowthBasis;
   /** 예상 연배당 (종목 통화) = 최근 12개월 주당 배당 × 현재 수량 */
   annualDividend: string;
   /** 예상 연배당 (원화, USD는 최신 환율) */

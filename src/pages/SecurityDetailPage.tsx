@@ -57,7 +57,7 @@ import { type CandleInterval, toCandles, weekStart } from '../lib/candles';
 import { KRW_COLOR, USD_COLOR } from '../lib/chart';
 import { fillDividendMonths, monthTickLabel, trailingYearDividend } from '../lib/dividends';
 import { accountLabel } from '../lib/account';
-import { findMetricsItem } from '../lib/dividendMetrics';
+import { findMetricsItem, growthBasisNote } from '../lib/dividendMetrics';
 import { useAccountParam } from '../lib/useAccountParam';
 import {
   formatDate,
@@ -463,7 +463,7 @@ function DividendHistoryCard({
               <MetricBox
                 label="배당 성장률 (전년 12개월 대비)"
                 value={<ProfitText value={metrics.growthRate} variant="h6" fontWeight={700} />}
-                sub={`직전 12개월 ${formatPrice(metrics.previousPerShare, security.currency)}`}
+                sub={growthBasisNote(metrics, security.currency)}
               />
             </Grid>
           </Grid>

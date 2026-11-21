@@ -67,4 +67,42 @@ describe('SecurityDetailPage', () => {
       accountId: 1,
     });
   });
+
+  it('회당 평균으로 계산한 배당 성장률은 그 기준을 함께 보여준다', async () => {
+    const metrics = dividendMetrics();
+    metrics.items = [
+      {
+        securityId: 'KR7005930003',
+        symbol: '005930',
+        name: '삼성전자',
+        currency: 'KRW',
+        quantity: '5',
+        trailingPerShare: '238',
+        paymentCount: 12,
+        previousPerShare: '130',
+        previousPaymentCount: 7,
+        growthRate: '6.79',
+        growthBasis: 'PER_PAYMENT',
+        annualDividend: '1190',
+        krwAnnualDividend: '1190',
+        krwPurchaseAmount: '350000',
+        closingPrice: '71000',
+        priceDate: '2026-11-21',
+        krwEvaluationAmount: '355000',
+        yieldOnCost: '0.34',
+        currentYield: '0.33',
+      },
+    ];
+    mockApi({
+      'GET /balance/purchases': purchases(),
+      'GET /accounts': accountList(),
+      'GET /daily-securities': { security, from: null, to: null, prices: [] },
+      'GET /dividends': { security, months: [] },
+      'GET /balance/dividend-metrics': metrics,
+    });
+    renderPage(<SecurityDetailPage />, { route: '/securities/KR7005930003', path: '/securities/:securityId' });
+
+    expect(await screen.findByText('+6.79%')).toBeInTheDocument();
+    expect(screen.getByText('상장 1년 미만 · 회당 평균 18.57원 → 19.83원')).toBeInTheDocument();
+  });
 });

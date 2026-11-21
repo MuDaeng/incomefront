@@ -10,6 +10,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import { useMemo } from 'react';
@@ -143,6 +144,13 @@ export function DividendMetricsSection({ accountId }: { accountId?: number }) {
                       <TableCell align="right">{formatPercent(item.currentYield)}</TableCell>
                       <TableCell align="right">
                         <ProfitText value={item.growthRate} />
+                        {item.growthBasis === 'PER_PAYMENT' && (
+                          <Tooltip title="상장 1년 미만이라 직전 12개월 지급 횟수가 적어, 회당 평균 배당으로 비교했어요">
+                            <Typography variant="caption" color="text.secondary" component="div">
+                              회당 평균
+                            </Typography>
+                          </Tooltip>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}

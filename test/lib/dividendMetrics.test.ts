@@ -1,6 +1,7 @@
 import type { DividendMetricsItem, DividendMetricsResponse } from '../../src/api/types';
 import {
   findMetricsItem,
+  growthBasisNote,
   monthlyAverage,
   payingCount,
   sortByAnnualDividend,
@@ -16,7 +17,9 @@ const item = (securityId: string, krwAnnualDividend: string): DividendMetricsIte
   trailingPerShare: '0',
   paymentCount: 0,
   previousPerShare: '0',
+  previousPaymentCount: 0,
   growthRate: null,
+  growthBasis: 'TOTAL',
   annualDividend: krwAnnualDividend,
   krwAnnualDividend,
   krwPurchaseAmount: '1000',
@@ -53,5 +56,21 @@ describe('dividendMetrics', () => {
   it('formatPercent는 부호 없이 소수 2자리, 값이 없으면 -', () => {
     expect(formatPercent('3.2')).toBe('3.20%');
     expect(formatPercent(null)).toBe('-');
+  });
+});
+
+describe('growthBasisNote', () => {
+  const growth = { trailingPerShare: '238', paymentCount: 12, previousPerShare: '130', previousPaymentCount: 7 };
+
+  it('회당 평균으로 비교했으면 상장 1년 미만과 두 평균을 보여준다', () => {
+    expect(growthBasisNote({ ...growth, growthBasis: 'PER_PAYMENT' }, 'KRW')).toBe(
+      '상장 1년 미만 · 회당 평균 18.57원 → 19.83원',
+    );
+  });
+
+  it('합으로 비교했거나 방식이 없으면(배포 전 백엔드) 직전 12개월 합을 보여준다', () => {
+    expect(growthBasisNote({ ...growth, growthBasis: 'TOTAL' }, 'KRW')).toBe('직전 12개월 130원');
+    const legacy = { ...growth, growthBasis: undefined } as unknown as Parameters<typeof growthBasisNote>[0];
+    expect(growthBasisNote(legacy, 'USD')).toBe('직전 12개월 $130.00');
   });
 });
