@@ -1,6 +1,13 @@
 import { fireEvent, screen } from '@testing-library/react';
 import { DividendsPage } from '../../src/pages/DividendsPage';
-import { accountList, currentMonthBalance, dividendHistory, dividendMetrics, scheduledDividends } from '../fixtures';
+import {
+  accountList,
+  currentMonthBalance,
+  dividendHistory,
+  dividendItem,
+  dividendMetrics,
+  scheduledDividends,
+} from '../fixtures';
 import { apiError, mockApi, renderPage, requestCalls } from '../testUtils';
 
 jest.mock('../../src/api/client', () => ({ ...jest.requireActual('../../src/api/client'), request: jest.fn() }));
@@ -69,10 +76,71 @@ describe('DividendsPage', () => {
       'GET /accounts': accountList(),
       'GET /balance/dividend-metrics': dividendMetrics(),
     });
-    renderPage(<DividendsPage />, { route: '/dividends?accountId=2' });
+    renderPage(<DividendsPage />, { route: '/dividends?accountId=2&tab=metrics' });
     expect(await screen.findByText('총 배당금 (세전)')).toBeInTheDocument();
     expect(requestCalls('GET', '/balance/dividends').at(-1)?.query?.accountId).toBe(2);
+    expect(await screen.findByText('현재 보유 종목이 없어요')).toBeInTheDocument();
     expect(requestCalls('GET', '/balance/dividend-metrics').at(-1)?.query?.accountId).toBe(2);
+  });
+
+  it('처음에는 월별 내역 탭만 보이고, 배당 지표는 탭을 눌러야 조회한다', async () => {
+    setup();
+    expect(await screen.findByText('월별 배당금')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: '월별 내역' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.queryByText('현재 보유 종목이 없어요')).toBeNull();
+    expect(requestCalls('GET', '/balance/dividend-metrics')).toHaveLength(0);
+
+    fireEvent.click(screen.getByRole('tab', { name: '배당 지표' }));
+
+    expect(await screen.findByText('현재 보유 종목이 없어요')).toBeInTheDocument();
+    expect(screen.queryByText('월별 배당금')).toBeNull();
+    expect(requestCalls('GET', '/balance/dividend-metrics')).toHaveLength(1);
+  });
+
+  it('배당금 순위 탭은 기간 지급분을 종목별 원화 합이 큰 순서로 보여주고 세후로 바뀐다', async () => {
+    const usd = dividendItem({
+      securityId: 'US7561091049',
+      name: '리얼티 인컴',
+      currency: 'USD',
+      amount: '64.000000',
+      usdAmount: '64.000000',
+      krwAmount: '87350',
+      taxAmount: '9.600000',
+      afterTaxAmount: '54.400000',
+      afterTaxUsdAmount: '54.400000',
+      afterTaxKrwAmount: '73889',
+      exchangeRate: '1364.84',
+      exchangeRateDate: '2026-04-15',
+    });
+    const history = dividendHistory();
+    history.months = [{ ...history.months[0], items: [dividendItem(), usd] }];
+    setup({ ...history, scheduled: scheduledDividends() });
+
+    fireEvent.click(await screen.findByRole('tab', { name: '배당금 순위' }));
+
+    expect(screen.getByText('배당금 순위 (세전)')).toBeInTheDocument();
+    const rows = screen.getAllByRole('row').slice(1);
+    expect(rows).toHaveLength(2); // 지급 예정(SK하이닉스)은 빠진다
+    expect(rows[0]).toHaveTextContent('리얼티 인컴');
+    expect(rows[0]).toHaveTextContent('87,350원');
+    expect(rows[0]).toHaveTextContent('70.75%');
+    expect(rows[1]).toHaveTextContent('삼성전자');
+    expect(rows[1]).toHaveTextContent('29.24%');
+
+    fireEvent.click(screen.getByRole('button', { name: '세후' }));
+
+    expect(screen.getByText('배당금 순위 (세후)')).toBeInTheDocument();
+    expect(screen.getAllByRole('row')[1]).toHaveTextContent('73,889원');
+  });
+
+  it('배당금 순위 탭은 기간 지급분이 없으면 빈 화면 안내를 보여준다', async () => {
+    mockApi({
+      'GET /balance/dividends': dividendHistory({ months: [], scheduled: scheduledDividends() }),
+      'GET /accounts': accountList(),
+    });
+    renderPage(<DividendsPage />, { route: '/dividends?tab=ranking' });
+    expect(await screen.findByText('이 기간에 받은 배당금이 없어요')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: '배당금 순위' })).toHaveAttribute('aria-selected', 'true');
   });
 
   it('평가금액 + 누적 배당금이 원금보다 적은 종목은 배당으로 원금 회복 예상 기간을 보여준다', async () => {
@@ -112,7 +180,7 @@ describe('DividendsPage', () => {
         { securityId: 'KR7000002222', name: '이익종목', purchaseAmount: '100000', totalAmount: '130000' },
       ]),
     });
-    renderPage(<DividendsPage />, { route: '/dividends?accountId=2' });
+    renderPage(<DividendsPage />, { route: '/dividends?accountId=2&tab=metrics' });
 
     expect(await screen.findByText('배당으로 원금 회복')).toBeInTheDocument();
     expect(screen.getByText('약 2년 6개월')).toBeInTheDocument();
@@ -158,7 +226,7 @@ describe('DividendsPage', () => {
         { securityId: 'KR7000002222', name: '이익종목', purchaseAmount: '100000', totalAmount: '130000' },
       ]),
     });
-    renderPage(<DividendsPage />, { route: '/dividends' });
+    renderPage(<DividendsPage />, { route: '/dividends?tab=metrics' });
     expect(await screen.findByText('배당 포함 손실 중인 종목이 없어요')).toBeInTheDocument();
   });
 
@@ -169,7 +237,7 @@ describe('DividendsPage', () => {
       'GET /balance/dividend-metrics': heldMetrics(),
       'GET /balance/monthly': apiError(500, '월별 잔고 조회 실패'),
     });
-    renderPage(<DividendsPage />, { route: '/dividends' });
+    renderPage(<DividendsPage />, { route: '/dividends?tab=metrics' });
     expect(await screen.findByText('배당으로 원금 회복')).toBeInTheDocument();
     expect(await screen.findByText('월별 잔고 조회 실패')).toBeInTheDocument();
   });

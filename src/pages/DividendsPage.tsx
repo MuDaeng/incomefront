@@ -11,12 +11,14 @@ import {
   Grid,
   LinearProgress,
   Stack,
+  Tab,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
+  Tabs,
   Tooltip,
   Typography,
 } from '@mui/material';
@@ -27,7 +29,9 @@ import { useDividendHistory, useAccounts } from '../api/queries';
 import { AccountSelect } from '../components/AccountSelect';
 import { useAccountParam } from '../lib/useAccountParam';
 import { useTaxMode } from '../lib/useTaxMode';
-import type { DividendItem, MonthlyDividend } from '../api/types';
+import { useTabParam } from '../lib/useTabParam';
+import { rankDividends } from '../lib/dividendRanking';
+import type { DividendHistoryResponse, DividendItem, MonthlyDividend } from '../api/types';
 import {
   EmptyState,
   ErrorAlert,
@@ -38,6 +42,7 @@ import {
 } from '../components/common';
 import { DateRange, DateRangeBar, PRESETS } from '../components/DateRangeBar';
 import { DividendMetricsSection } from '../components/DividendMetricsSection';
+import { DividendRankingTable } from '../components/DividendRankingTable';
 import { CurrencyChip } from '../components/SecuritySearch';
 import { TaxModeToggle } from '../components/TaxModeToggle';
 import { KRW_COLOR, USD_COLOR } from '../lib/chart';
@@ -60,6 +65,9 @@ import {
   formatUsd,
   toNumber,
 } from '../lib/format';
+
+const TABS = ['monthly', 'ranking', 'metrics'] as const;
+type DividendTab = (typeof TABS)[number];
 
 const PRESET_LIST = [
   PRESETS.today,
@@ -89,6 +97,7 @@ export function DividendsPage() {
   const [range, setRange] = useState<DateRange>(PRESETS.thisYear.range);
   const [accountId, setAccountId] = useAccountParam();
   const [taxMode, setTaxMode] = useTaxMode();
+  const [tab, setTab] = useTabParam(TABS);
   const { data: accounts } = useAccounts();
   const { data, isLoading, isFetching, error, refetch } = useDividendHistory(
     range.from,
@@ -154,135 +163,205 @@ export function DividendsPage() {
       ) : error ? (
         <ErrorAlert error={error} onRetry={() => refetch()} />
       ) : data && total && scheduled ? (
-        <>
-          <Grid container spacing={2} sx={{ mb: 2 }}>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <StatCard
-                highlight
-                label={`총 배당금 (${TAX_MODE_LABEL[taxMode]})`}
-                value={formatKrw(total.totalKrwAmount)}
-                footer={
-                  <>
-                    <KeyValue
-                      label="월 평균"
-                      value={formatKrw(toNumber(total.totalKrwAmount) / monthCount)}
-                    />
-                    {taxMode === 'after' && (
-                      <KeyValue label="세금 (원화 환산)" value={formatKrw(krwTaxAmount(data.total))} />
-                    )}
-                    <KeyValue label="지급 예정 (원화 환산)" value={formatKrw(scheduled.totalKrwAmount)} />
-                  </>
-                }
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-              <StatCard
-                label="국내 배당금"
-                value={formatKrw(total.krwAmount)}
-                footer={<KeyValue label="지급 예정" value={formatKrw(scheduled.krwAmount)} />}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-              <StatCard
-                label="미국 배당금"
-                value={formatUsd(total.usdAmount)}
-                footer={<KeyValue label="원화 환산" value={formatKrw(total.usdKrwAmount)} />}
-              />
-            </Grid>
-          </Grid>
-
-          {data.scheduled.items.length > 0 && (
-            <Card sx={{ mb: 2 }}>
-              <CardHeader
-                title={`지급 예정 ${data.scheduled.items.length}건 · ${formatKrw(scheduled.totalKrwAmount)}`}
-                subheader="지급일이 오늘 이후인 배당 (총 배당금·월별 내역에는 들어가지 않아요)"
-                slotProps={{ title: { variant: 'h6' } }}
-              />
-              <TableContainer>
-                <Table size="small">
-                  <DividendTableHead taxMode={taxMode} />
-                  <TableBody>
-                    {data.scheduled.items.map((item) => (
-                      <DividendRow
-                        key={`${item.securityId}-${item.noticeDate}-${item.paymentDate}`}
-                        item={item}
-                        today={today}
-                        taxMode={taxMode}
-                      />
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Card>
-          )}
-
-          {data.months.length === 0 ? (
-            // 지급분이 없어도 지급 예정 배당이 있으면 위 카드만 보여준다
-            data.scheduled.items.length === 0 && (
-              <Card>
-                <EmptyState
-                  title="이 기간에 받은 배당금이 없어요"
-                  description="기간을 바꾸거나 배당 종목의 매수 내역을 등록해 보세요."
-                />
-              </Card>
-            )
-          ) : (
-            <>
-              <Card sx={{ mb: 2 }}>
-                <CardHeader title="월별 배당금" slotProps={{ title: { variant: 'h6' } }} />
-                <CardContent sx={{ pt: 0 }}>
-                  <BarChart
-                    height={300}
-                    grid={{ horizontal: true }}
-                    xAxis={[
-                      {
-                        scaleType: 'band',
-                        data: chartMonths.map((m) => m.month),
-                        valueFormatter: (m: string, ctx) =>
-                          ctx.location === 'tick' ? `${Number(m.slice(5))}월` : formatMonth(m),
-                      },
-                    ]}
-                    yAxis={[{ width: 56, valueFormatter: (v: number) => formatKrwCompact(v) }]}
-                    series={[
-                      {
-                        data: chartMonths.map((m) => m.krw),
-                        label: '국내',
-                        stack: 'total',
-                        color: KRW_COLOR,
-                        valueFormatter: (v) => formatKrw(v),
-                      },
-                      {
-                        data: chartMonths.map((m) => m.usdKrw),
-                        label: '미국(원화 환산)',
-                        stack: 'total',
-                        color: USD_COLOR,
-                        valueFormatter: (v) => formatKrw(v),
-                      },
-                    ]}
-                    borderRadius={4}
+        <Grid container spacing={2} sx={{ mb: 2 }}>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <StatCard
+              highlight
+              label={`총 배당금 (${TAX_MODE_LABEL[taxMode]})`}
+              value={formatKrw(total.totalKrwAmount)}
+              footer={
+                <>
+                  <KeyValue
+                    label="월 평균"
+                    value={formatKrw(toNumber(total.totalKrwAmount) / monthCount)}
                   />
-                </CardContent>
-              </Card>
-
-              <Typography variant="h6" sx={{ mb: 1.5 }}>
-                월별 내역
-              </Typography>
-              {[...data.months].reverse().map((m, idx) => (
-                <MonthAccordion
-                  key={m.month}
-                  month={m}
-                  defaultExpanded={idx === 0}
-                  today={today}
-                  taxMode={taxMode}
-                />
-              ))}
-            </>
-          )}
-        </>
+                  {taxMode === 'after' && (
+                    <KeyValue label="세금 (원화 환산)" value={formatKrw(krwTaxAmount(data.total))} />
+                  )}
+                  <KeyValue label="지급 예정 (원화 환산)" value={formatKrw(scheduled.totalKrwAmount)} />
+                </>
+              }
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+            <StatCard
+              label="국내 배당금"
+              value={formatKrw(total.krwAmount)}
+              footer={<KeyValue label="지급 예정" value={formatKrw(scheduled.krwAmount)} />}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+            <StatCard
+              label="미국 배당금"
+              value={formatUsd(total.usdAmount)}
+              footer={<KeyValue label="원화 환산" value={formatKrw(total.usdKrwAmount)} />}
+            />
+          </Grid>
+        </Grid>
       ) : null}
 
-      <DividendMetricsSection accountId={accountId} />
+      <Card>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 1 }}>
+          <Tabs value={tab} onChange={(_, v: DividendTab) => setTab(v)} variant="scrollable">
+            <Tab value="monthly" label="월별 내역" />
+            <Tab value="ranking" label="배당금 순위" />
+            <Tab value="metrics" label="배당 지표" />
+          </Tabs>
+        </Box>
+      </Card>
+
+      <Box sx={{ mt: 2 }}>
+        {tab === 'monthly' && data && scheduled && (
+          <MonthlyTab
+            data={data}
+            chartMonths={chartMonths}
+            scheduledTotalKrw={scheduled.totalKrwAmount}
+            today={today}
+            taxMode={taxMode}
+          />
+        )}
+        {tab === 'ranking' && data && <RankingTab data={data} taxMode={taxMode} accountId={accountId} />}
+        {/* 배당 지표는 오늘 기준이라 기간 필터·배당 내역 조회와 무관하다 */}
+        {tab === 'metrics' && <DividendMetricsSection accountId={accountId} />}
+      </Box>
     </>
+  );
+}
+
+type ChartMonth = { month: string; krw: number; usdKrw: number };
+
+/** 월별 내역 탭: 지급 예정 카드 + 월별 차트 + 월별 아코디언 */
+function MonthlyTab({
+  data,
+  chartMonths,
+  scheduledTotalKrw,
+  today,
+  taxMode,
+}: {
+  data: DividendHistoryResponse;
+  chartMonths: ChartMonth[];
+  scheduledTotalKrw: string;
+  today: string;
+  taxMode: TaxMode;
+}) {
+  return (
+    <>
+      {data.scheduled.items.length > 0 && (
+        <Card sx={{ mb: 2 }}>
+          <CardHeader
+            title={`지급 예정 ${data.scheduled.items.length}건 · ${formatKrw(scheduledTotalKrw)}`}
+            subheader="지급일이 오늘 이후인 배당 (총 배당금·월별 내역에는 들어가지 않아요)"
+            slotProps={{ title: { variant: 'h6' } }}
+          />
+          <TableContainer>
+            <Table size="small">
+              <DividendTableHead taxMode={taxMode} />
+              <TableBody>
+                {data.scheduled.items.map((item) => (
+                  <DividendRow
+                    key={`${item.securityId}-${item.noticeDate}-${item.paymentDate}`}
+                    item={item}
+                    today={today}
+                    taxMode={taxMode}
+                  />
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Card>
+      )}
+
+      {data.months.length === 0 ? (
+        // 지급분이 없어도 지급 예정 배당이 있으면 위 카드만 보여준다
+        data.scheduled.items.length === 0 && <NoDividends />
+      ) : (
+        <>
+          <Card sx={{ mb: 2 }}>
+            <CardHeader title="월별 배당금" slotProps={{ title: { variant: 'h6' } }} />
+            <CardContent sx={{ pt: 0 }}>
+              <BarChart
+                height={300}
+                grid={{ horizontal: true }}
+                xAxis={[
+                  {
+                    scaleType: 'band',
+                    data: chartMonths.map((m) => m.month),
+                    valueFormatter: (m: string, ctx) =>
+                      ctx.location === 'tick' ? `${Number(m.slice(5))}월` : formatMonth(m),
+                  },
+                ]}
+                yAxis={[{ width: 56, valueFormatter: (v: number) => formatKrwCompact(v) }]}
+                series={[
+                  {
+                    data: chartMonths.map((m) => m.krw),
+                    label: '국내',
+                    stack: 'total',
+                    color: KRW_COLOR,
+                    valueFormatter: (v) => formatKrw(v),
+                  },
+                  {
+                    data: chartMonths.map((m) => m.usdKrw),
+                    label: '미국(원화 환산)',
+                    stack: 'total',
+                    color: USD_COLOR,
+                    valueFormatter: (v) => formatKrw(v),
+                  },
+                ]}
+                borderRadius={4}
+              />
+            </CardContent>
+          </Card>
+
+          <Typography variant="h6" sx={{ mb: 1.5 }}>
+            월별 내역
+          </Typography>
+          {[...data.months].reverse().map((m, idx) => (
+            <MonthAccordion
+              key={m.month}
+              month={m}
+              defaultExpanded={idx === 0}
+              today={today}
+              taxMode={taxMode}
+            />
+          ))}
+        </>
+      )}
+    </>
+  );
+}
+
+/** 배당금 순위 탭: 기간 안에 지급받은 배당의 종목별 합계 순위 */
+function RankingTab({
+  data,
+  taxMode,
+  accountId,
+}: {
+  data: DividendHistoryResponse;
+  taxMode: TaxMode;
+  accountId?: number;
+}) {
+  const items = useMemo(() => rankDividends(data.months, taxMode), [data, taxMode]);
+  if (items.length === 0) return <NoDividends />;
+  return (
+    <Card>
+      <CardHeader
+        title={`배당금 순위 (${TAX_MODE_LABEL[taxMode]})`}
+        subheader="이 기간에 지급받은 배당금을 종목별로 합산 · 원화 환산 합이 큰 순서 (지급 예정 제외)"
+        slotProps={{ title: { variant: 'h6' } }}
+      />
+      <DividendRankingTable items={items} accountId={accountId} />
+    </Card>
+  );
+}
+
+function NoDividends() {
+  return (
+    <Card>
+      <EmptyState
+        title="이 기간에 받은 배당금이 없어요"
+        description="기간을 바꾸거나 배당 종목의 매수 내역을 등록해 보세요."
+      />
+    </Card>
   );
 }
 

@@ -41,7 +41,7 @@ export function DividendMetricsSection({ accountId }: { accountId?: number }) {
   const items = useMemo(() => sortByAnnualDividend(data?.items ?? []), [data]);
 
   return (
-    <Box sx={{ mt: 3 }}>
+    <Box>
       <Typography variant="h6">배당 지표</Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
         현재 보유 수량 × 최근 12개월 주당 배당 기준 (세전)
