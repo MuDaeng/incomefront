@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { SecurityDetailPage } from '../../src/pages/SecurityDetailPage';
 import { accountList, accounts, currentMonthBalance, dividendMetrics, purchases } from '../fixtures';
-import { mockApi, renderPage, requestCalls } from '../testUtils';
+import { apiError, mockApi, renderPage, requestCalls } from '../testUtils';
 
 jest.mock('../../src/api/client', () => ({ ...jest.requireActual('../../src/api/client'), request: jest.fn() }));
 
@@ -69,30 +69,7 @@ describe('SecurityDetailPage', () => {
   });
 
   it('회당 평균으로 계산한 배당 성장률은 그 기준을 함께 보여준다', async () => {
-    const metrics = dividendMetrics();
-    metrics.items = [
-      {
-        securityId: 'KR7005930003',
-        symbol: '005930',
-        name: '삼성전자',
-        currency: 'KRW',
-        quantity: '5',
-        trailingPerShare: '238',
-        paymentCount: 12,
-        previousPerShare: '130',
-        previousPaymentCount: 7,
-        growthRate: '6.79',
-        growthBasis: 'PER_PAYMENT',
-        annualDividend: '1190',
-        krwAnnualDividend: '1190',
-        krwPurchaseAmount: '350000',
-        closingPrice: '71000',
-        priceDate: '2026-11-21',
-        krwEvaluationAmount: '355000',
-        yieldOnCost: '0.34',
-        currentYield: '0.33',
-      },
-    ];
+    const metrics = heldMetrics();
     mockApi({
       'GET /balance/purchases': purchases(),
       'GET /accounts': accountList(),
@@ -100,17 +77,7 @@ describe('SecurityDetailPage', () => {
       'GET /dividends': { security, months: [] },
       'GET /balance/dividend-metrics': metrics,
       // 원금 350,000 > 평가 335,000 + 누적배당 5,000 → 손실 10,000 / 연배당 1,190 → 101개월
-      'GET /balance/monthly': currentMonthBalance([
-        {
-          securityId: 'KR7005930003',
-          name: '삼성전자',
-          quantity: '5',
-          purchaseAmount: '350000',
-          evaluationAmount: '335000',
-          dividendAmount: '5000',
-          totalAmount: '340000',
-        },
-      ]),
+      'GET /balance/monthly': monthlyFor('340000'),
     });
     renderPage(<SecurityDetailPage />, { route: '/securities/KR7005930003', path: '/securities/:securityId' });
 
@@ -119,4 +86,72 @@ describe('SecurityDetailPage', () => {
     expect(await screen.findByText(/지금 배당이면 약 8년 5개월 뒤/)).toBeInTheDocument();
     expect(screen.getByText('-10,000원')).toBeInTheDocument();
   });
+
+  const renderWithMonthly = (monthly: unknown) => {
+    mockApi({
+      'GET /balance/purchases': purchases(),
+      'GET /accounts': accountList(),
+      'GET /daily-securities': { security, from: null, to: null, prices: [] },
+      'GET /dividends': { security, months: [] },
+      'GET /balance/dividend-metrics': heldMetrics(),
+      'GET /balance/monthly': monthly,
+    });
+    renderPage(<SecurityDetailPage />, { route: '/securities/KR7005930003', path: '/securities/:securityId' });
+  };
+
+  it('배당 포함 손실이 없으면 원금 회복 자리에 안내 문구를 보여준다', async () => {
+    renderWithMonthly(monthlyFor('380000'));
+    expect(await screen.findByText(/배당 포함 손실이 없어요/)).toBeInTheDocument();
+    expect(screen.getByText('+30,000원')).toBeInTheDocument();
+    expect(screen.queryByText(/지금 배당이면/)).toBeNull();
+  });
+
+  it('월별 잔고 조회가 실패하면 원금 회복 자리에 오류 안내를 보여준다', async () => {
+    renderWithMonthly(apiError(500, '월별 잔고 조회 실패'));
+    expect(await screen.findByText('정보를 불러오지 못했어요. 월별 잔고 조회 실패')).toBeInTheDocument();
+  });
 });
+
+/** 삼성전자 5주 보유, 연배당 1,190원 (PER_PAYMENT 성장률) */
+function heldMetrics() {
+  const metrics = dividendMetrics();
+  metrics.items = [
+    {
+      securityId: 'KR7005930003',
+      symbol: '005930',
+      name: '삼성전자',
+      currency: 'KRW',
+      quantity: '5',
+      trailingPerShare: '238',
+      paymentCount: 12,
+      previousPerShare: '130',
+      previousPaymentCount: 7,
+      growthRate: '6.79',
+      growthBasis: 'PER_PAYMENT',
+      annualDividend: '1190',
+      krwAnnualDividend: '1190',
+      krwPurchaseAmount: '350000',
+      closingPrice: '71000',
+      priceDate: '2026-11-21',
+      krwEvaluationAmount: '355000',
+      yieldOnCost: '0.34',
+      currentYield: '0.33',
+    },
+  ];
+  return metrics;
+}
+
+/** 이번 달 삼성전자 원금 350,000원, 평가금액 + 누적배당금 = totalAmount (누적배당 5,000원) */
+function monthlyFor(totalAmount: string) {
+  return currentMonthBalance([
+    {
+      securityId: 'KR7005930003',
+      name: '삼성전자',
+      quantity: '5',
+      purchaseAmount: '350000',
+      evaluationAmount: String(Number(totalAmount) - 5000),
+      dividendAmount: '5000',
+      totalAmount,
+    },
+  ]);
+}

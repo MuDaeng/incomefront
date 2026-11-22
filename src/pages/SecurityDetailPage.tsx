@@ -420,20 +420,29 @@ function DividendHistoryCard({
   // 보유 기준 지표 (현재 보유하지 않으면 없음)
   const { data: metricsData } = useDividendMetrics(accountId);
   const metrics = findMetricsItem(metricsData, security.id);
-  // 배당으로 원금 회복 예상 (보유 중이고 평가금액 + 누적배당금 < 원금일 때만)
+  // 배당으로 원금 회복 예상 (보유 중일 때. 평가금액 + 누적배당금 < 원금이면 회복 기간, 아니면 안내)
   const today = dayjs().format('YYYY-MM-DD');
   const thisMonth = today.slice(0, 7);
-  const { data: monthlyData } = useMonthlyBalance(thisMonth, thisMonth, !!metrics, accountId);
-  const recovery = useMemo(() => {
-    if (!metrics) return null;
-    const monthItems = monthlyData?.months[monthlyData.months.length - 1]?.items ?? [];
-    return (
-      dividendRecoveryItems(
-        monthItems.filter((i) => i.securityId === security.id),
-        [metrics],
-      )[0] ?? null
-    );
-  }, [monthlyData, metrics, security.id]);
+  const { data: monthlyData, error: monthlyError } = useMonthlyBalance(
+    thisMonth,
+    thisMonth,
+    !!metrics,
+    accountId,
+  );
+  const monthlyItem = useMemo(
+    () =>
+      monthlyData?.months[monthlyData.months.length - 1]?.items.find(
+        (i) => i.securityId === security.id && toNumber(i.quantity) > 0,
+      ) ?? null,
+    [monthlyData, security.id],
+  );
+  const monthlyGain = monthlyItem
+    ? toNumber(monthlyItem.totalAmount) - toNumber(monthlyItem.purchaseAmount)
+    : 0;
+  const recovery = useMemo(
+    () => (metrics && monthlyItem ? (dividendRecoveryItems([monthlyItem], [metrics])[0] ?? null) : null),
+    [monthlyItem, metrics],
+  );
   const months = useMemo(() => data?.months ?? [], [data]);
   const chartMonths = useMemo(() => fillDividendMonths(months, DIVIDEND_CHART_MONTHS), [months]);
   const trailing = useMemo(
@@ -483,7 +492,7 @@ function DividendHistoryCard({
                 sub={growthBasisNote(metrics, security.currency)}
               />
             </Grid>
-            {recovery && (
+            {recovery ? (
               <Grid size={12}>
                 <Tooltip title={RECOVERY_NOTE}>
                   <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: 'action.hover' }}>
@@ -503,6 +512,36 @@ function DividendHistoryCard({
                   </Box>
                 </Tooltip>
               </Grid>
+            ) : monthlyItem ? (
+              <Grid size={12}>
+                <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: 'action.hover' }}>
+                  <Typography variant="caption" color="text.secondary">
+                    배당으로 원금 회복 (평가금액 + 누적 배당금 {formatKrw(monthlyItem.totalAmount)} / 원금{' '}
+                    {formatKrw(monthlyItem.purchaseAmount)})
+                  </Typography>
+                  <Typography variant="body1" sx={{ fontWeight: 700 }}>
+                    배당 포함 손실이 없어요 (
+                    <ProfitText value={monthlyGain}>
+                      {monthlyGain > 0 ? '+' : ''}
+                      {formatKrw(monthlyGain)}
+                    </ProfitText>
+                    )
+                  </Typography>
+                </Box>
+              </Grid>
+            ) : (
+              monthlyError && (
+                <Grid size={12}>
+                  <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: 'action.hover' }}>
+                    <Typography variant="caption" color="text.secondary">
+                      배당으로 원금 회복
+                    </Typography>
+                    <Typography variant="body2" color="error">
+                      정보를 불러오지 못했어요. {monthlyError.message}
+                    </Typography>
+                  </Box>
+                </Grid>
+              )
             )}
           </Grid>
         )}
