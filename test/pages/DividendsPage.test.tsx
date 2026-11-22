@@ -1,7 +1,7 @@
 import { fireEvent, screen } from '@testing-library/react';
 import { DividendsPage } from '../../src/pages/DividendsPage';
-import { accountList, dividendHistory, dividendMetrics, scheduledDividends } from '../fixtures';
-import { mockApi, renderPage, requestCalls } from '../testUtils';
+import { accountList, currentMonthBalance, dividendHistory, dividendMetrics, scheduledDividends } from '../fixtures';
+import { apiError, mockApi, renderPage, requestCalls } from '../testUtils';
 
 jest.mock('../../src/api/client', () => ({ ...jest.requireActual('../../src/api/client'), request: jest.fn() }));
 
@@ -73,5 +73,104 @@ describe('DividendsPage', () => {
     expect(await screen.findByText('총 배당금 (세전)')).toBeInTheDocument();
     expect(requestCalls('GET', '/balance/dividends').at(-1)?.query?.accountId).toBe(2);
     expect(requestCalls('GET', '/balance/dividend-metrics').at(-1)?.query?.accountId).toBe(2);
+  });
+
+  it('평가금액 + 누적 배당금이 원금보다 적은 종목은 배당으로 원금 회복 예상 기간을 보여준다', async () => {
+    const metrics = dividendMetrics();
+    const metricsItem = (securityId: string, symbol: string, name: string, krwAnnualDividend: string) => ({
+      securityId,
+      symbol,
+      name,
+      currency: 'KRW' as const,
+      quantity: '10',
+      trailingPerShare: '0',
+      paymentCount: 4,
+      previousPerShare: '0',
+      previousPaymentCount: 4,
+      growthRate: null,
+      growthBasis: 'TOTAL' as const,
+      annualDividend: krwAnnualDividend,
+      krwAnnualDividend,
+      krwPurchaseAmount: '100000',
+      closingPrice: null,
+      priceDate: null,
+      krwEvaluationAmount: null,
+      yieldOnCost: null,
+      currentYield: null,
+    });
+    metrics.items = [
+      metricsItem('KR7000001111', '000111', '손실종목', '6000'),
+      metricsItem('KR7000002222', '000222', '이익종목', '6000'),
+    ];
+    mockApi({
+      'GET /balance/dividends': dividendHistory(),
+      'GET /accounts': accountList(),
+      'GET /balance/dividend-metrics': metrics,
+      'GET /balance/monthly': currentMonthBalance([
+        // 손실 15,000 / 연 6,000 → 30개월
+        { securityId: 'KR7000001111', name: '손실종목', purchaseAmount: '100000', totalAmount: '85000' },
+        { securityId: 'KR7000002222', name: '이익종목', purchaseAmount: '100000', totalAmount: '130000' },
+      ]),
+    });
+    renderPage(<DividendsPage />, { route: '/dividends?accountId=2' });
+
+    expect(await screen.findByText('배당으로 원금 회복')).toBeInTheDocument();
+    expect(screen.getByText('약 2년 6개월')).toBeInTheDocument();
+    expect(screen.getByText('-15,000원')).toBeInTheDocument();
+    expect(screen.getAllByText('이익종목')).toHaveLength(1); // 배당 지표 표에만
+    expect(requestCalls('GET', '/balance/monthly').at(-1)?.query?.accountId).toBe(2);
+  });
+
+  const heldMetrics = () => {
+    const metrics = dividendMetrics();
+    metrics.items = [
+      {
+        securityId: 'KR7000002222',
+        symbol: '000222',
+        name: '이익종목',
+        currency: 'KRW',
+        quantity: '10',
+        trailingPerShare: '600',
+        paymentCount: 4,
+        previousPerShare: '600',
+        previousPaymentCount: 4,
+        growthRate: null,
+        growthBasis: 'TOTAL',
+        annualDividend: '6000',
+        krwAnnualDividend: '6000',
+        krwPurchaseAmount: '100000',
+        closingPrice: null,
+        priceDate: null,
+        krwEvaluationAmount: null,
+        yieldOnCost: null,
+        currentYield: null,
+      },
+    ];
+    return metrics;
+  };
+
+  it('배당 포함 손실 종목이 없으면 원금 회복 카드에 안내 문구를 보여준다', async () => {
+    mockApi({
+      'GET /balance/dividends': dividendHistory(),
+      'GET /accounts': accountList(),
+      'GET /balance/dividend-metrics': heldMetrics(),
+      'GET /balance/monthly': currentMonthBalance([
+        { securityId: 'KR7000002222', name: '이익종목', purchaseAmount: '100000', totalAmount: '130000' },
+      ]),
+    });
+    renderPage(<DividendsPage />, { route: '/dividends' });
+    expect(await screen.findByText('배당 포함 손실 중인 종목이 없어요')).toBeInTheDocument();
+  });
+
+  it('월별 잔고 조회가 실패하면 원금 회복 카드에 오류를 보여준다', async () => {
+    mockApi({
+      'GET /balance/dividends': dividendHistory(),
+      'GET /accounts': accountList(),
+      'GET /balance/dividend-metrics': heldMetrics(),
+      'GET /balance/monthly': apiError(500, '월별 잔고 조회 실패'),
+    });
+    renderPage(<DividendsPage />, { route: '/dividends' });
+    expect(await screen.findByText('배당으로 원금 회복')).toBeInTheDocument();
+    expect(await screen.findByText('월별 잔고 조회 실패')).toBeInTheDocument();
   });
 });

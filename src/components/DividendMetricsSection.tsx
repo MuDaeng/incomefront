@@ -28,6 +28,7 @@ import {
 } from '../lib/format';
 import { securityDetailPath } from '../lib/account';
 import { EmptyState, ErrorAlert, KeyValue, Loading, ProfitText, StatCard } from './common';
+import { DividendRecoveryCard } from './DividendRecoveryCard';
 import { CurrencyChip, SymbolChip } from './SecuritySearch';
 
 /**
@@ -158,6 +159,8 @@ export function DividendMetricsSection({ accountId }: { accountId?: number }) {
               </Table>
             </TableContainer>
           </Card>
+
+          <DividendRecoveryCard metricsItems={data.items} accountId={accountId} />
         </>
       )}
     </Box>

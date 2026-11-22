@@ -1,6 +1,6 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { SecurityDetailPage } from '../../src/pages/SecurityDetailPage';
-import { accountList, accounts, dividendMetrics, purchases } from '../fixtures';
+import { accountList, accounts, currentMonthBalance, dividendMetrics, purchases } from '../fixtures';
 import { mockApi, renderPage, requestCalls } from '../testUtils';
 
 jest.mock('../../src/api/client', () => ({ ...jest.requireActual('../../src/api/client'), request: jest.fn() }));
@@ -99,10 +99,24 @@ describe('SecurityDetailPage', () => {
       'GET /daily-securities': { security, from: null, to: null, prices: [] },
       'GET /dividends': { security, months: [] },
       'GET /balance/dividend-metrics': metrics,
+      // 원금 350,000 > 평가 335,000 + 누적배당 5,000 → 손실 10,000 / 연배당 1,190 → 101개월
+      'GET /balance/monthly': currentMonthBalance([
+        {
+          securityId: 'KR7005930003',
+          name: '삼성전자',
+          quantity: '5',
+          purchaseAmount: '350000',
+          evaluationAmount: '335000',
+          dividendAmount: '5000',
+          totalAmount: '340000',
+        },
+      ]),
     });
     renderPage(<SecurityDetailPage />, { route: '/securities/KR7005930003', path: '/securities/:securityId' });
 
     expect(await screen.findByText('+6.79%')).toBeInTheDocument();
     expect(screen.getByText('상장 1년 미만 · 회당 평균 18.57원 → 19.83원')).toBeInTheDocument();
+    expect(await screen.findByText(/지금 배당이면 약 8년 5개월 뒤/)).toBeInTheDocument();
+    expect(screen.getByText('-10,000원')).toBeInTheDocument();
   });
 });

@@ -9,6 +9,7 @@ import type {
   DividendMetricsResponse,
   DividendSummary,
   IntegratedBalanceResponse,
+  MonthlyBalanceItem,
   MonthlyBalanceResponse,
   PeriodReturnResponse,
   PurchaseHistoryResponse,
@@ -271,3 +272,38 @@ export const purchases = (overrides: Partial<PurchaseHistoryResponse> = {}): Pur
   ],
   ...overrides,
 });
+
+/** GET /balance/monthly 이번 달 한 달치 (원금·평가금액·누적배당금은 항목 합) */
+export const currentMonthBalance = (
+  items: Array<Partial<MonthlyBalanceItem> & Pick<MonthlyBalanceItem, 'securityId' | 'name'>>,
+  month = '2026-11',
+): MonthlyBalanceResponse => {
+  const full: MonthlyBalanceItem[] = items.map((i) => ({
+    currency: 'KRW',
+    quantity: '1',
+    purchaseAmount: '0',
+    evaluationAmount: '0',
+    dividendAmount: '0',
+    totalAmount: '0',
+    ...i,
+  }));
+  const sum = (key: 'purchaseAmount' | 'evaluationAmount' | 'dividendAmount' | 'totalAmount') =>
+    String(full.reduce((acc, i) => acc + Number(i[key]), 0));
+  return {
+    from: month,
+    to: month,
+    months: [
+      {
+        month,
+        date: `${month}-22`,
+        total: {
+          purchaseAmount: sum('purchaseAmount'),
+          evaluationAmount: sum('evaluationAmount'),
+          dividendAmount: sum('dividendAmount'),
+          totalAmount: sum('totalAmount'),
+        },
+        items: full,
+      },
+    ],
+  };
+};

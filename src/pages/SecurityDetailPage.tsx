@@ -30,6 +30,7 @@ import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
 import {
   useDailyPrices,
   useDividendMetrics,
+  useMonthlyBalance,
   usePurchases,
   useAccounts,
   useSecurityDividends,
@@ -58,6 +59,8 @@ import { KRW_COLOR, USD_COLOR } from '../lib/chart';
 import { fillDividendMonths, monthTickLabel, trailingYearDividend } from '../lib/dividends';
 import { accountLabel } from '../lib/account';
 import { findMetricsItem, growthBasisNote } from '../lib/dividendMetrics';
+import { dividendRecoveryItems, formatRecoveryPeriod, recoveryMonth } from '../lib/dividendRecovery';
+import { RECOVERY_NOTE } from '../components/DividendRecoveryCard';
 import { useAccountParam } from '../lib/useAccountParam';
 import {
   formatDate,
@@ -417,6 +420,20 @@ function DividendHistoryCard({
   // 보유 기준 지표 (현재 보유하지 않으면 없음)
   const { data: metricsData } = useDividendMetrics(accountId);
   const metrics = findMetricsItem(metricsData, security.id);
+  // 배당으로 원금 회복 예상 (보유 중이고 평가금액 + 누적배당금 < 원금일 때만)
+  const today = dayjs().format('YYYY-MM-DD');
+  const thisMonth = today.slice(0, 7);
+  const { data: monthlyData } = useMonthlyBalance(thisMonth, thisMonth, !!metrics, accountId);
+  const recovery = useMemo(() => {
+    if (!metrics) return null;
+    const monthItems = monthlyData?.months[monthlyData.months.length - 1]?.items ?? [];
+    return (
+      dividendRecoveryItems(
+        monthItems.filter((i) => i.securityId === security.id),
+        [metrics],
+      )[0] ?? null
+    );
+  }, [monthlyData, metrics, security.id]);
   const months = useMemo(() => data?.months ?? [], [data]);
   const chartMonths = useMemo(() => fillDividendMonths(months, DIVIDEND_CHART_MONTHS), [months]);
   const trailing = useMemo(
@@ -466,6 +483,27 @@ function DividendHistoryCard({
                 sub={growthBasisNote(metrics, security.currency)}
               />
             </Grid>
+            {recovery && (
+              <Grid size={12}>
+                <Tooltip title={RECOVERY_NOTE}>
+                  <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: 'action.hover' }}>
+                    <Typography variant="caption" color="text.secondary">
+                      배당으로 원금 회복 (평가금액 + 누적 배당금 {formatKrw(recovery.totalAmount)} / 원금{' '}
+                      {formatKrw(recovery.purchaseAmount)})
+                    </Typography>
+                    <Typography variant="body1" sx={{ fontWeight: 700 }}>
+                      손실 <ProfitText value={-recovery.loss}>{formatKrw(-recovery.loss)}</ProfitText>
+                      {' · '}
+                      {recovery.months === null
+                        ? '최근 12개월 배당이 없어 배당으로 회복할 수 없어요'
+                        : `지금 배당이면 ${formatRecoveryPeriod(recovery.months)} 뒤 (${formatMonth(
+                            recoveryMonth(recovery.months, today) ?? '',
+                          )}경) 회복`}
+                    </Typography>
+                  </Box>
+                </Tooltip>
+              </Grid>
+            )}
           </Grid>
         )}
         {isLoading ? (
