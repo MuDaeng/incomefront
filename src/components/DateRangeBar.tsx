@@ -40,6 +40,12 @@ export const PRESETS: Record<string, RangePreset> = {
     label: '오늘',
     range: () => ({ from: today(), to: today() }),
   },
+  /** 어제 ~ 오늘: 기간 수익률에서 어제 종가 대비 하루 변동을 본다 */
+  last1d: {
+    key: 'last1d',
+    label: '하루',
+    range: () => ({ from: dayjs().subtract(1, 'day').format(ISO), to: today() }),
+  },
   last1w: {
     key: 'last1w',
     label: '일주일',

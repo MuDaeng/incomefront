@@ -52,7 +52,7 @@ import {
 } from '../lib/format';
 
 const PRESET_LIST = [
-  PRESETS.today,
+  PRESETS.last1d,
   PRESETS.last1w,
   PRESETS.last1m,
   PRESETS.qtd,

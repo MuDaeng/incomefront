@@ -1,4 +1,5 @@
-import { fireEvent, screen, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import dayjs from 'dayjs';
 import { ReturnsPage } from '../../src/pages/ReturnsPage';
 import { accountList, monthlyBalance, periodReturn } from '../fixtures';
 import { mockApi, renderPage, requestCalls } from '../testUtils';
@@ -71,6 +72,19 @@ describe('ReturnsPage', () => {
   it('시작 환율이 있으면 캡션에 함께 보여준다', async () => {
     setup(periodReturn({ startExchangeRate: '1450.50', startExchangeRateDate: '2025-12-31' }));
     expect(await screen.findByText(/시작일 전 매수분 기준금액 환율/)).toBeInTheDocument();
+  });
+
+  it('하루 프리셋은 어제부터 오늘까지 조회한다', async () => {
+    setup();
+    expect(await screen.findByText(/^총수익 세전/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '오늘' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: '하루' }));
+    await waitFor(() =>
+      expect(requestCalls('GET', '/balance/returns').at(-1)?.query).toMatchObject({
+        from: dayjs().subtract(1, 'day').format('YYYY-MM-DD'),
+        to: dayjs().format('YYYY-MM-DD'),
+      }),
+    );
   });
 
   it('URL의 계좌 필터를 수익률·월별 추이 요청에 넣는다', async () => {
