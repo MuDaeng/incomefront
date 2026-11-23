@@ -58,6 +58,7 @@ describe('dividendTax', () => {
   it('기간 수익률: 배당·총액·수익금·수익률만 세후로', () => {
     const t: TotalReturnSummary = {
       purchaseAmount: '100000',
+      baseAmount: '100000',
       evaluationAmount: '110000',
       dividendAmount: '1000',
       totalAmount: '111000',

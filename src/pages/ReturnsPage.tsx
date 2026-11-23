@@ -75,7 +75,7 @@ export function ReturnsPage() {
     <>
       <PageHeader
         title="기간 수익률"
-        subtitle={`종료일 보유분 평가손익 + 기간 중 받은 배당금(${TAX_MODE_LABEL[taxMode]}) = 원금 대비 총수익`}
+        subtitle={`종료일 보유분 평가손익 + 기간 중 받은 배당금(${TAX_MODE_LABEL[taxMode]}) = 기간 시작 시점 기준금액 대비 총수익`}
         action={
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
             <TaxModeToggle value={taxMode} onChange={setTaxMode} />
@@ -120,7 +120,9 @@ function ReturnsContent({ data, taxMode }: { data: PeriodReturnResponse; taxMode
   const tv = totalReturnView(t, taxMode);
   const dividendTotal = dividendSumView(data.dividend.total, taxMode);
   const taxLabel = TAX_MODE_LABEL[taxMode];
-  const evalProfit = toNumber(t.evaluationAmount) - toNumber(t.purchaseAmount);
+  // 평가손익은 서버 값(평가금액 − 기준금액)을 그대로 쓴다
+  const evalProfit = data.evaluation.total.profit;
+  const baseAmount = toNumber(t.baseAmount);
 
   if (data.total.items.length === 0) {
     return (
@@ -148,6 +150,7 @@ function ReturnsContent({ data, taxMode }: { data: PeriodReturnResponse; taxMode
             footer={
               <>
                 <KeyValue label="원금" value={formatKrw(t.purchaseAmount)} />
+                <KeyValue label="기준금액" value={formatKrw(t.baseAmount)} />
                 <KeyValue label={`평가금액 + 배당금(${taxLabel})`} value={formatKrw(tv.totalAmount)} />
               </>
             }
@@ -167,10 +170,8 @@ function ReturnsContent({ data, taxMode }: { data: PeriodReturnResponse; taxMode
             value={formatKrw(tv.dividendAmount)}
             sub={
               <Typography variant="body2" color="text.secondary">
-                원금 대비{' '}
-                {toNumber(t.purchaseAmount) > 0
-                  ? `${((toNumber(tv.dividendAmount) / toNumber(t.purchaseAmount)) * 100).toFixed(2)}%`
-                  : '-'}
+                기준금액 대비{' '}
+                {baseAmount > 0 ? `${((toNumber(tv.dividendAmount) / baseAmount) * 100).toFixed(2)}%` : '-'}
               </Typography>
             }
             footer={
@@ -197,10 +198,17 @@ function ReturnsContent({ data, taxMode }: { data: PeriodReturnResponse; taxMode
         {tab === 'evaluation' && <EvaluationTable data={data} />}
         {tab === 'dividend' && <DividendTable data={data} taxMode={taxMode} />}
       </Card>
-      {data.exchangeRate && (
-        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.5 }}>
-          미국 종목 평가 환율 {formatExchangeRate(data.exchangeRate)} ({formatDate(data.exchangeRateDate)} 기준) ·
-          원금은 매수일 환율로 환산
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.5 }}>
+        시작일 전 매수분은 시작일 종가, 기간 중 매수분은 원금을 기준금액으로 계산해요 · 국내 종목은 15:30 전이면 전날
+        종가
+      </Typography>
+      {(data.exchangeRate || data.startExchangeRate) && (
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+          {data.exchangeRate &&
+            `미국 종목 평가 환율 ${formatExchangeRate(data.exchangeRate)} (${formatDate(data.exchangeRateDate)} 기준) · 원금은 매수일 환율로 환산`}
+          {data.exchangeRate && data.startExchangeRate && ' · '}
+          {data.startExchangeRate &&
+            `시작일 전 매수분 기준금액 환율 ${formatExchangeRate(data.startExchangeRate)} (${formatDate(data.startExchangeRateDate)} 기준)`}
         </Typography>
       )}
     </>
@@ -217,7 +225,7 @@ function ContributionChart({ data, taxMode }: { data: PeriodReturnResponse; taxM
         .slice(0, 12)
         .map(({ item, view }) => ({
           name: item.name,
-          evaluation: toNumber(item.evaluationAmount) - toNumber(item.purchaseAmount),
+          evaluation: toNumber(item.evaluationAmount) - toNumber(item.baseAmount),
           dividend: toNumber(view.dividendAmount),
         })),
     [data, taxMode],
@@ -277,6 +285,7 @@ function TotalTable({ data, taxMode }: { data: PeriodReturnResponse; taxMode: Ta
           <TableRow>
             <TableCell>종목</TableCell>
             <TableCell align="right">원금</TableCell>
+            <TableCell align="right">기준금액</TableCell>
             <TableCell align="right">평가금액</TableCell>
             <TableCell align="right">배당금({TAX_MODE_LABEL[taxMode]})</TableCell>
             <TableCell align="right">평가 + 배당</TableCell>
@@ -291,6 +300,7 @@ function TotalTable({ data, taxMode }: { data: PeriodReturnResponse; taxMode: Ta
               <TableRow key={i.securityId} hover>
                 <NameCell name={i.name} />
                 <TableCell align="right">{formatKrw(i.purchaseAmount)}</TableCell>
+                <TableCell align="right">{formatKrw(i.baseAmount)}</TableCell>
                 <TableCell align="right">{formatKrw(i.evaluationAmount)}</TableCell>
                 <TableCell align="right">{formatKrw(v.dividendAmount)}</TableCell>
                 <TableCell align="right">{formatKrw(v.totalAmount)}</TableCell>
@@ -306,6 +316,7 @@ function TotalTable({ data, taxMode }: { data: PeriodReturnResponse; taxMode: Ta
           <TotalRow
             cells={[
               formatKrw(t.purchaseAmount),
+              formatKrw(t.baseAmount),
               formatKrw(t.evaluationAmount),
               formatKrw(tv.dividendAmount),
               formatKrw(tv.totalAmount),
@@ -328,8 +339,9 @@ function EvaluationTable({ data }: { data: PeriodReturnResponse }) {
           <TableRow>
             <TableCell>종목</TableCell>
             <TableCell align="right">보유 수량</TableCell>
-            <TableCell align="right">종가</TableCell>
+            <TableCell align="right">종료 종가</TableCell>
             <TableCell align="right">원금</TableCell>
+            <TableCell align="right">기준금액</TableCell>
             <TableCell align="right">평가금액</TableCell>
             <TableCell align="right">평가손익</TableCell>
             <TableCell align="right">수익률</TableCell>
@@ -353,6 +365,16 @@ function EvaluationTable({ data }: { data: PeriodReturnResponse }) {
                 {i.usdPurchaseAmount && <Sub>{formatUsd(i.usdPurchaseAmount)}</Sub>}
               </TableCell>
               <TableCell align="right">
+                {formatKrw(i.krwBaseAmount)}
+                {i.usdBaseAmount && <Sub>{formatUsd(i.usdBaseAmount)}</Sub>}
+                {i.startClosingPrice && (
+                  <Sub>
+                    시작 {formatPrice(i.startClosingPrice, i.currency)}
+                    {i.startPriceDate && ` · ${formatDate(i.startPriceDate)}`}
+                  </Sub>
+                )}
+              </TableCell>
+              <TableCell align="right">
                 {formatKrw(i.krwEvaluationAmount)}
                 {i.usdEvaluationAmount && <Sub>{formatUsd(i.usdEvaluationAmount)}</Sub>}
               </TableCell>
@@ -369,6 +391,7 @@ function EvaluationTable({ data }: { data: PeriodReturnResponse }) {
               '',
               '',
               formatKrw(t.purchaseAmount),
+              formatKrw(t.baseAmount),
               formatKrw(t.evaluationAmount),
               <ProfitText value={t.profit}>{formatSignedKrw(t.profit)}</ProfitText>,
               <ProfitText value={t.returnRate} />,

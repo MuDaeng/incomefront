@@ -483,18 +483,31 @@ export interface EvaluationItem {
   name: string;
   currency: Currency;
   quantity: string;
+  /** 기준금액에 쓴 시작일(이전 최근) 종가, 종목 통화 (시작일 전 매수분이 없거나 원금으로 대신했으면 null) */
+  startClosingPrice: string | null;
+  startPriceDate: string | null;
+  /** 종료일(이전 최근) 종가. 국내 종목은 15:30 전이면 전날 종가 */
   closingPrice: string | null;
   priceDate: string | null;
   usdPurchaseAmount: string | null;
+  /** 외화 기준금액 (KRW 종목은 null) */
+  usdBaseAmount: string | null;
   usdEvaluationAmount: string | null;
   krwPurchaseAmount: string;
+  /** 원화 기준금액: 시작일 전 매수분은 시작일 종가 × 수량(USD는 시작일 환율), 기간 중 매수분은 원금 */
+  krwBaseAmount: string;
   krwEvaluationAmount: string;
+  /** 평가금액 − 기준금액 */
   profit: string;
+  /** 기준금액 대비 수익률(%) */
   returnRate: string;
 }
 
 export interface EvaluationSummary {
+  /** 실제 원금 합계 */
   purchaseAmount: string;
+  /** 기준금액 합계 (수익률의 분모) */
+  baseAmount: string;
   evaluationAmount: string;
   profit: string;
   returnRate: string;
@@ -532,15 +545,20 @@ export interface TotalReturnItem extends AfterTaxReturnFields {
   securityId: string;
   name: string;
   purchaseAmount: string;
+  /** 기준금액: 시작일 전 매수분은 시작일 평가금액, 기간 중 매수분은 원금 */
+  baseAmount: string;
   evaluationAmount: string;
   dividendAmount: string;
   totalAmount: string;
+  /** 평가금액 + 배당금 − 기준금액 */
   profit: string;
+  /** 기준금액 대비 수익률(%) */
   returnRate: string;
 }
 
 export interface TotalReturnSummary extends AfterTaxReturnFields {
   purchaseAmount: string;
+  baseAmount: string;
   evaluationAmount: string;
   dividendAmount: string;
   totalAmount: string;
@@ -553,6 +571,9 @@ export interface PeriodReturnResponse {
   to: string;
   exchangeRate: string | null;
   exchangeRateDate: string | null;
+  /** 시작일 전 매수한 USD 보유분의 기준금액에 쓴 환율 (해당 보유분 없으면 null) */
+  startExchangeRate: string | null;
+  startExchangeRateDate: string | null;
   evaluation: { items: EvaluationItem[]; total: EvaluationSummary };
   dividend: {
     items: DividendSumItem[];
