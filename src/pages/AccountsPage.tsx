@@ -128,10 +128,7 @@ function AccountRow({
   return (
     <TableRow hover>
       <TableCell sx={{ whiteSpace: 'nowrap' }}>
-        <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-          <AccountChip account={{ ...account, accountId: account.id }} accounts={accounts} />
-          <span>{accountLabel(account, accounts)}</span>
-        </Stack>
+        <AccountChip account={{ ...account, accountId: account.id }} accounts={accounts} />
       </TableCell>
       <TableCell>
         <TextField
