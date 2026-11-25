@@ -29,6 +29,7 @@ import { LoginPage } from './pages/LoginPage';
 import { ReturnsPage } from './pages/ReturnsPage';
 import { AdminBatchPage } from './pages/AdminBatchPage';
 import { AdminClientTokenPage } from './pages/AdminClientTokenPage';
+import { AdminLayout } from './pages/AdminLayout';
 import { AdminPriceSearchPage } from './pages/AdminPriceSearchPage';
 import { SecurityDetailPage } from './pages/SecurityDetailPage';
 import { TossImportPage } from './pages/TossImportPage';
@@ -94,9 +95,12 @@ export default function App() {
                         <Route path="returns" element={<ReturnsPage />} />
                         <Route path="accounts" element={<AccountsPage />} />
                         <Route path="toss-import" element={<TossImportPage />} />
-                        <Route path="admin/batches" element={<AdminBatchPage />} />
-                        <Route path="admin/price-searches" element={<AdminPriceSearchPage />} />
-                        <Route path="admin/client-tokens" element={<AdminClientTokenPage />} />
+                        <Route path="admin" element={<AdminLayout />}>
+                          <Route index element={<Navigate to="batches" replace />} />
+                          <Route path="batches" element={<AdminBatchPage />} />
+                          <Route path="price-searches" element={<AdminPriceSearchPage />} />
+                          <Route path="client-tokens" element={<AdminClientTokenPage />} />
+                        </Route>
                         <Route path="*" element={<NotFound />} />
                       </Route>
                     </Route>
