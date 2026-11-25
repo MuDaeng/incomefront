@@ -18,13 +18,13 @@ const setup = (extra: Record<string, unknown> = {}) => {
 describe('AccountsPage', () => {
   it('계좌 목록을 증권사·타입 이름으로 보여준다', async () => {
     setup();
-    expect(await screen.findByText('토스증권 · 일반')).toBeInTheDocument();
-    expect(screen.getByText('키움증권 · ISA')).toBeInTheDocument();
+    expect(await screen.findByText('토스')).toBeInTheDocument();
+    expect(screen.getByText('키움 ISA')).toBeInTheDocument();
   });
 
   it('계좌 타입을 바꾸면 그 계좌의 타입 변경을 요청한다', async () => {
     setup();
-    const row = (await screen.findByText('토스증권 · 일반')).closest('tr') as HTMLElement;
+    const row = (await screen.findByText('토스')).closest('tr') as HTMLElement;
     fireEvent.mouseDown(within(row).getByRole('combobox'));
     fireEvent.click(within(screen.getByRole('listbox')).getByRole('option', { name: 'ISA' }));
 
@@ -34,7 +34,7 @@ describe('AccountsPage', () => {
 
   it('계좌 추가는 고른 증권사·타입으로 생성을 요청한다', async () => {
     setup();
-    await screen.findByText('토스증권 · 일반');
+    await screen.findByText('토스');
     fireEvent.click(screen.getByRole('button', { name: '계좌 추가' }));
     const dialog = await screen.findByRole('dialog');
 
@@ -50,7 +50,7 @@ describe('AccountsPage', () => {
 
   it('매수 내역이 남은 계좌를 삭제하면 서버 메시지를 보여준다', async () => {
     setup({ 'DELETE /accounts/2': apiError(400, '매수 내역이 남아 있는 계좌는 삭제할 수 없습니다.') });
-    const row = (await screen.findByText('키움증권 · ISA')).closest('tr') as HTMLElement;
+    const row = (await screen.findByText('키움 ISA')).closest('tr') as HTMLElement;
     fireEvent.click(within(row).getByRole('button', { name: '계좌 삭제' }));
     const dialog = await screen.findByRole('dialog');
     fireEvent.click(within(dialog).getByRole('button', { name: '삭제' }));
