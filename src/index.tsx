@@ -4,7 +4,6 @@ import dayjs from 'dayjs';
 import 'dayjs/locale/ko';
 import './index.css';
 import App from './App';
-import reportWebVitals from './reportWebVitals';
 
 dayjs.locale('ko');
 
@@ -14,5 +13,3 @@ root.render(
     <App />
   </React.StrictMode>,
 );
-
-reportWebVitals();

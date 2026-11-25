@@ -3,7 +3,7 @@ import { AccountsPage } from '../../src/pages/AccountsPage';
 import { accountList } from '../fixtures';
 import { apiError, mockApi, renderPage, requestCalls, selectOption } from '../testUtils';
 
-jest.mock('../../src/api/client', () => ({ ...jest.requireActual('../../src/api/client'), request: jest.fn() }));
+vi.mock('../../src/api/client', async (importOriginal) => ({ ...(await importOriginal<object>()), request: vi.fn() }));
 
 const setup = (extra: Record<string, unknown> = {}) => {
   mockApi({

@@ -3,7 +3,7 @@ import { SecurityDetailPage } from '../../src/pages/SecurityDetailPage';
 import { accountList, accounts, currentMonthBalance, dividendMetrics, purchases } from '../fixtures';
 import { apiError, mockApi, renderPage, requestCalls } from '../testUtils';
 
-jest.mock('../../src/api/client', () => ({ ...jest.requireActual('../../src/api/client'), request: jest.fn() }));
+vi.mock('../../src/api/client', async (importOriginal) => ({ ...(await importOriginal<object>()), request: vi.fn() }));
 
 const security = { id: 'KR7005930003', symbol: '005930', name: '삼성전자', currency: 'KRW' };
 

@@ -1,3 +1,4 @@
+import type { MockInstance } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { ErrorBoundary } from '../../src/components/ErrorBoundary';
 
@@ -8,11 +9,11 @@ function Boom() {
 }
 
 describe('ErrorBoundary', () => {
-  let consoleError: jest.SpyInstance;
+  let consoleError: MockInstance<typeof console.error>;
   beforeEach(() => {
     shouldThrow = true;
     // React와 componentDidCatch가 남기는 오류 로그는 테스트 출력에서 숨긴다
-    consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+    consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
   });
   afterEach(() => consoleError.mockRestore());
 

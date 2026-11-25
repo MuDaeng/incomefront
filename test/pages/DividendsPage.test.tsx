@@ -10,7 +10,7 @@ import {
 } from '../fixtures';
 import { apiError, mockApi, renderPage, requestCalls } from '../testUtils';
 
-jest.mock('../../src/api/client', () => ({ ...jest.requireActual('../../src/api/client'), request: jest.fn() }));
+vi.mock('../../src/api/client', async (importOriginal) => ({ ...(await importOriginal<object>()), request: vi.fn() }));
 
 const setup = (history = dividendHistory()) => {
   mockApi({

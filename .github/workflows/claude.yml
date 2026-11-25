@@ -38,7 +38,7 @@ jobs:
         with:
           fetch-depth: 1
 
-      # 구현 후 타입 체크·테스트·빌드를 돌릴 수 있도록 의존성을 미리 설치한다 (.npmrc의 legacy-peer-deps 적용)
+      # 구현 후 타입 체크·테스트·빌드를 돌릴 수 있도록 의존성을 미리 설치한다
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -58,5 +58,5 @@ jobs:
             actions: read
 
           claude_args: |
-            --allowed-tools "Bash(npx tsc --noEmit -p .),Bash(CI=true npm test *),Bash(npm test *),Bash(npm run build),Bash(npm ci)"
-            --append-system-prompt "GitHub Actions에서 실행 중이다. 이슈·댓글 답변과 커밋 메시지는 한국어로 쓴다. claude-output.md 대화 기록은 로컬 전용이므로 만들거나 고치지 않는다. 브랜치는 이 액션이 만든 claude/issue-... 브랜치를 그대로 쓰고 master에 직접 push하지 않는다. 커밋하기 전에 npx tsc --noEmit -p . , CI=true npm test -- --watchAll=false , npm run build 를 돌려 모두 통과시킨다. 그 밖의 규칙(아키텍처, 테스트 위치, MUI 9 API, 한국 시장 색 등)은 CLAUDE.md를 따른다."
+            --allowed-tools "Bash(npx tsc --noEmit -p .),Bash(npx vitest run *),Bash(npm run lint),Bash(npm run build),Bash(npm ci)"
+            --append-system-prompt "GitHub Actions에서 실행 중이다. 이슈·댓글 답변과 커밋 메시지는 한국어로 쓴다. claude-output.md 대화 기록은 로컬 전용이므로 만들거나 고치지 않는다. 브랜치는 이 액션이 만든 claude/issue-... 브랜치를 그대로 쓰고 master에 직접 push하지 않는다. 커밋하기 전에 npx tsc --noEmit -p . , npm run lint , npx vitest run , npm run build 를 돌려 모두 통과시킨다. 그 밖의 규칙(아키텍처, 테스트 위치, MUI 9 API, 한국 시장 색 등)은 CLAUDE.md를 따른다."

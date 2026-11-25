@@ -4,7 +4,7 @@ import { TossImportPage } from '../../src/pages/TossImportPage';
 import { accountList, accounts } from '../fixtures';
 import { mockApi, renderPage, requestCalls } from '../testUtils';
 
-jest.mock('../../src/api/client', () => ({ ...jest.requireActual('../../src/api/client'), request: jest.fn() }));
+vi.mock('../../src/api/client', async (importOriginal) => ({ ...(await importOriginal<object>()), request: vi.fn() }));
 
 const buy = {
   transactionType: 'BUY',

@@ -1,6 +1,6 @@
 name: CI
 
-# master push와 모든 PR에서 타입 체크·테스트·프로덕션 빌드(ESLint 포함)를 돌린다.
+# master push와 모든 PR에서 타입 체크·ESLint·테스트·프로덕션 빌드를 돌린다.
 on:
   push:
     branches: [master]
@@ -23,7 +23,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # .npmrc의 legacy-peer-deps가 적용된다 (TypeScript 5.9 vs react-scripts의 ^4 peer 범위)
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -36,10 +35,13 @@ jobs:
       - name: Type check
         run: npx tsc --noEmit -p .
 
-      - name: Test
-        run: npm test -- --watchAll=false
+      # Vite는 빌드 중에 ESLint를 돌리지 않아서 따로 검사한다 (경고도 실패: --max-warnings 0)
+      - name: Lint
+        run: npm run lint
 
-      # GitHub Actions는 CI=true라서 CRA가 ESLint 경고도 빌드 실패로 처리한다.
+      - name: Test
+        run: npx vitest run
+
       # .env.production(공개 API 주소만)이 커밋돼 있어 별도 환경변수는 필요 없다.
       - name: Build
         run: npm run build

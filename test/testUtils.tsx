@@ -1,8 +1,8 @@
 /**
  * 페이지 테스트 공용 도구.
  * - mockApi: src/api/client의 request만 가짜로 바꿔 라우트 표의 응답을 돌려준다
- *   (테스트 파일 맨 위에서 request를 jest.fn으로 바꿔 둔다:
- *   jest.mock('../../src/api/client', () => ({ ...jest.requireActual('../../src/api/client'), request: jest.fn() }));)
+ *   (테스트 파일 맨 위에서 request를 vi.fn으로 바꿔 둔다:
+ *   vi.mock('../../src/api/client', async (importOriginal) => ({ ...(await importOriginal<object>()), request: vi.fn() }));)
  * - renderPage: 앱과 같은 Provider로 감싸 페이지를 그린다
  */
 import { ThemeProvider } from '@mui/material/styles';
@@ -12,6 +12,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import 'dayjs/locale/ko';
 import type { ReactElement } from 'react';
+import type { Mock } from 'vitest';
 import { MemoryRouter, Outlet, Route, Routes } from 'react-router-dom';
 import { ApiError, request } from '../src/api/client';
 import { NotifierProvider } from '../src/components/Notifier';
@@ -28,7 +29,7 @@ interface RequestOptions {
 type RouteHandler = unknown | ((options: RequestOptions) => unknown);
 export type ApiRoutes = Record<string, RouteHandler>;
 
-const requestMock = () => request as unknown as jest.Mock;
+const requestMock = () => request as unknown as Mock;
 
 /** "METHOD path" 라우트 표로 request 응답을 정한다. 표에 없는 요청은 실패시킨다 */
 export function mockApi(routes: ApiRoutes) {
@@ -60,7 +61,7 @@ export function renderPage(
   {
     route = '/',
     path = '*',
-    outletContext = { openRegister: jest.fn() },
+    outletContext = { openRegister: vi.fn() },
   }: { route?: string; path?: string; outletContext?: unknown } = {},
 ) {
   const queryClient = new QueryClient({

@@ -1,20 +1,24 @@
 {
   "compilerOptions": {
-    "target": "es5",
+    "target": "ESNext",
     "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
+      "ESNext",
+      "DOM",
+      "DOM.Iterable"
     ],
-    "allowJs": true,
+    "types": [
+      "vite/client",
+      "vitest/globals",
+      "node"
+    ],
     "skipLibCheck": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "strict": true,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
-    "module": "esnext",
-    "moduleResolution": "node",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
@@ -22,6 +26,7 @@
   },
   "include": [
     "src",
-    "test"
+    "test",
+    "vite.config.ts"
   ]
 }

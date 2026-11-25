@@ -1,5 +1,5 @@
 /**
- * 테스트용 MUI X Charts 대체 모듈 (package.json jest.moduleNameMapper가 '@mui/x-charts/*'를 여기로 연결).
+ * 테스트용 MUI X Charts 대체 모듈 (vite.config.ts test.alias가 '@mui/x-charts/*'를 여기로 연결).
  * 실제 차트는 d3(ESM 전용)를 쓰고 jsdom에서 크기를 잴 수 없어서, 페이지 테스트는 차트를 그리지 않고
  * 숫자·표·문구만 확인한다.
  */
