@@ -14,6 +14,7 @@ import type {
   BulkRegisterTossRequest,
   BulkRegisterTossResponse,
   BulkSellBalanceRequest,
+  ClientTokenItem,
   CreateAccountRequest,
   DailyPriceResponse,
   DeletePurchaseRequest,
@@ -64,6 +65,8 @@ export const queryKeys = {
     ['admin', 'batch-histories', name ?? null, status ?? null, limit] as const,
   /** 관리자 종목별 일별 시세 조회 이력 (잔고와 무관) */
   priceSearches: ['admin', 'security-searches', 'price'] as const,
+  /** 관리자 외부 API 토큰 갱신 시각 (잔고와 무관) */
+  clientTokens: ['admin', 'client-tokens'] as const,
 };
 
 /** 통합잔고. accountId를 주면 그 계좌 매수분만, 없으면 전체 */
@@ -326,4 +329,11 @@ export const usePriceSearches = () =>
     queryKey: queryKeys.priceSearches,
     queryFn: ({ signal }) =>
       request<PriceSearchItem[]>('/admin/security-searches/price', { signal }),
+  });
+
+/** GET /admin/client-tokens (관리자 전용, 아니면 403). 외부 API별 토큰 마지막 발급 시각, 최신순 */
+export const useClientTokens = () =>
+  useQuery({
+    queryKey: queryKeys.clientTokens,
+    queryFn: ({ signal }) => request<ClientTokenItem[]>('/admin/client-tokens', { signal }),
   });

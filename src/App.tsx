@@ -28,6 +28,7 @@ import { DividendsPage } from './pages/DividendsPage';
 import { LoginPage } from './pages/LoginPage';
 import { ReturnsPage } from './pages/ReturnsPage';
 import { AdminBatchPage } from './pages/AdminBatchPage';
+import { AdminClientTokenPage } from './pages/AdminClientTokenPage';
 import { AdminPriceSearchPage } from './pages/AdminPriceSearchPage';
 import { SecurityDetailPage } from './pages/SecurityDetailPage';
 import { TossImportPage } from './pages/TossImportPage';
@@ -95,6 +96,7 @@ export default function App() {
                         <Route path="toss-import" element={<TossImportPage />} />
                         <Route path="admin/batches" element={<AdminBatchPage />} />
                         <Route path="admin/price-searches" element={<AdminPriceSearchPage />} />
+                        <Route path="admin/client-tokens" element={<AdminClientTokenPage />} />
                         <Route path="*" element={<NotFound />} />
                       </Route>
                     </Route>

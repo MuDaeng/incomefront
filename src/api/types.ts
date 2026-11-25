@@ -98,6 +98,19 @@ export interface PriceSearchItem {
   updatedAt: string;
 }
 
+/** 외부 API 종류 (백엔드 libs/common/src/client/client-type.enum.ts와 맞춘다) */
+export type ClientType = 'TOSS' | 'KAKAO' | 'NAVER' | 'KIS';
+
+/**
+ * GET /admin/client-tokens 항목 (updatedAt 최신순, 같으면 clientType순). 토큰 값은 내려오지 않는다.
+ * updatedAt은 토큰을 새로 발급해 저장할 때만 바뀐다 (저장된 토큰을 재사용하는 호출은 바꾸지 않음)
+ */
+export interface ClientTokenItem {
+  clientType: ClientType;
+  /** ISO 시각 */
+  updatedAt: string;
+}
+
 /* ---------- 계좌 ---------- */
 /** GET /accounts 항목. id는 사용자별 순번 */
 export interface Account {

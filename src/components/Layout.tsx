@@ -3,6 +3,7 @@ import AccountBalanceWalletOutlined from '@mui/icons-material/AccountBalanceWall
 import Add from '@mui/icons-material/Add';
 import DarkModeOutlined from '@mui/icons-material/DarkModeOutlined';
 import HistoryOutlined from '@mui/icons-material/HistoryOutlined';
+import KeyOutlined from '@mui/icons-material/KeyOutlined';
 import LightModeOutlined from '@mui/icons-material/LightModeOutlined';
 import Logout from '@mui/icons-material/Logout';
 import Menu from '@mui/icons-material/Menu';
@@ -45,6 +46,7 @@ const NAV = [
 const ADMIN_NAV = [
   { to: '/admin/batches', label: '배치 이력', icon: <HistoryOutlined /> },
   { to: '/admin/price-searches', label: '시세 조회 이력', icon: <ManageSearchOutlined /> },
+  { to: '/admin/client-tokens', label: '토큰 갱신 이력', icon: <KeyOutlined /> },
 ];
 
 interface LayoutContext {
