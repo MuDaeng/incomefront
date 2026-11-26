@@ -1,7 +1,7 @@
 import { apiErrorMessage } from '../lib/apiError';
 
 export const API_URL = (
-  import.meta.env.REACT_APP_API_URL ?? 'http://localhost:8080'
+  import.meta.env.VITE_API_URL ?? 'http://localhost:8080'
 ).replace(/\/$/, '');
 
 /** Google 로그인 시작 주소 (백엔드가 Google 로그인 페이지로 리다이렉트) */

@@ -2,7 +2,7 @@
 
 interface ImportMetaEnv {
   /** 백엔드 주소 (.env.production, 로컬은 .env.local) */
-  readonly REACT_APP_API_URL?: string;
+  readonly VITE_API_URL?: string;
 }
 
 interface ImportMeta {

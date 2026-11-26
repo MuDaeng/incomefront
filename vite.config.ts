@@ -4,8 +4,6 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   plugins: [react()],
-  // REACT_APP_API_URL(.env.production, .env.local, Vercel)을 그대로 쓴다
-  envPrefix: ['VITE_', 'REACT_APP_'],
   server: {
     // Google 로그인은 백엔드 FRONTEND_URL(http://localhost:3000)로만 돌아온다
     port: 3000,
