@@ -71,11 +71,8 @@ export const PRESETS: Record<string, RangePreset> = {
     label: '최근 1년',
     range: () => ({ from: dayjs().subtract(1, 'year').add(1, 'day').format(ISO), to: today() }),
   },
-  last3y: {
-    key: 'last3y',
-    label: '최근 3년',
-    range: () => ({ from: dayjs().subtract(3, 'year').add(1, 'day').format(ISO), to: today() }),
-  },
+  /** 처음부터 ~ 오늘: 기간 수익률용 (from 생략 = 모든 매수분을 원금 기준으로) */
+  sinceStart: { key: 'sinceStart', label: '전체', range: () => ({ to: today() }) },
   all: { key: 'all', label: '전체', range: () => ({}) },
 };
 

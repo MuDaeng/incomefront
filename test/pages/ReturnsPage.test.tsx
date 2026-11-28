@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import dayjs from 'dayjs';
 import { ReturnsPage } from '../../src/pages/ReturnsPage';
-import { accountList, monthlyBalance, periodReturn } from '../fixtures';
+import { accountList, currentMonthBalance, monthlyBalance, periodReturn } from '../fixtures';
 import { mockApi, renderPage, requestCalls } from '../testUtils';
 
 vi.mock('../../src/api/client', async (importOriginal) => ({ ...(await importOriginal<object>()), request: vi.fn() }));
@@ -85,6 +85,42 @@ describe('ReturnsPage', () => {
         to: dayjs().format('YYYY-MM-DD'),
       }),
     );
+  });
+
+  it('전체 프리셋은 시작일 없이 오늘까지 조회하고, 월별 추이는 최근 120개월을 조회한다', async () => {
+    setup(periodReturn({ from: null }));
+    expect(await screen.findByText(/^총수익 세전 \(처음부터 ~ /)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '최근 3년' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: '전체' }));
+    await waitFor(() => {
+      const query = requestCalls('GET', '/balance/returns').at(-1)?.query;
+      expect(query).toMatchObject({ to: dayjs().format('YYYY-MM-DD') });
+      expect(query?.from).toBeUndefined();
+    });
+    await waitFor(() =>
+      expect(requestCalls('GET', '/balance/monthly').at(-1)?.query).toMatchObject({
+        from: dayjs().subtract(119, 'month').format('YYYY-MM'),
+        to: dayjs().format('YYYY-MM'),
+      }),
+    );
+  });
+
+  it('월별 추이는 첫 매수 전의 빈 달을 잘라서 보여 준다', async () => {
+    const month = dayjs().format('YYYY-MM');
+    const current = currentMonthBalance([{ securityId: 'KR1', name: '삼성전자', purchaseAmount: '1000' }], month);
+    mockApi({
+      'GET /balance/returns': periodReturn(),
+      'GET /accounts': accountList(),
+      'GET /balance/monthly': {
+        ...current,
+        from: '2020-01',
+        months: [{ ...current.months[0], month: '2020-01', date: '2020-01-31', items: [] }, ...current.months],
+      },
+    });
+    renderPage(<ReturnsPage />, { route: '/returns' });
+    const thisMonth = dayjs().format('YYYY.MM');
+    expect(await screen.findByText((t) => t.startsWith(`${thisMonth} ~ `))).toBeInTheDocument();
+    expect(screen.queryByText((t) => t.startsWith('2020.01'))).toBeNull();
   });
 
   it('URL의 계좌 필터를 수익률·월별 추이 요청에 넣는다', async () => {

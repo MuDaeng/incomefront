@@ -58,13 +58,14 @@ const PRESET_LIST = [
   PRESETS.qtd,
   PRESETS.ytd,
   PRESETS.last12m,
-  PRESETS.last3y,
+  PRESETS.sinceStart,
 ];
 
 export function ReturnsPage() {
   const [presetKey, setPresetKey] = useState<string | null>(PRESETS.ytd.key);
   const [range, setRange] = useState<DateRange>(PRESETS.ytd.range);
-  const from = range.from!;
+  /** 없으면 처음부터 ("전체" 프리셋) */
+  const from = range.from;
   const to = range.to!;
   const [accountId, setAccountId] = useAccountParam();
   const [taxMode, setTaxMode] = useTaxMode();
@@ -138,7 +139,7 @@ function ReturnsContent({ data, taxMode }: { data: PeriodReturnResponse; taxMode
         <Grid size={{ xs: 12, md: 5 }}>
           <StatCard
             highlight
-            label={`총수익 ${taxLabel} (${formatDate(data.from)} ~ ${formatDate(data.to)})`}
+            label={`총수익 ${taxLabel} (${data.from ? formatDate(data.from) : '처음부터'} ~ ${formatDate(data.to)})`}
             value={
               <>
                 {formatSignedKrw(tv.profit)}

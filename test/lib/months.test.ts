@@ -1,4 +1,4 @@
-import { MAX_MONTHS, monthsForDateRange, totalReturnRate } from '../../src/lib/months';
+import { MAX_MONTHS, monthsForDateRange, totalReturnRate, trimLeadingEmptyMonths } from '../../src/lib/months';
 
 const TODAY = '2026-11-14';
 
@@ -39,6 +39,28 @@ describe('monthsForDateRange', () => {
 
   it('시작이 미래 달이면 조회할 달이 없어 null', () => {
     expect(monthsForDateRange('2026-12-01', '2026-12-31', TODAY)).toBeNull();
+  });
+
+  it(`시작일이 없으면(전체) 종료 달 기준 최근 ${MAX_MONTHS}개월`, () => {
+    expect(monthsForDateRange(undefined, '2026-11-14', TODAY)).toEqual({
+      from: '2016-12',
+      to: '2026-11',
+      cappedToCurrentMonth: false,
+      cappedToMaxMonths: true,
+    });
+  });
+});
+
+describe('trimLeadingEmptyMonths', () => {
+  const m = (month: string, n: number) => ({ month, items: Array<object>(n).fill({}) });
+
+  it('앞쪽 빈 달만 자르고 중간·뒤쪽 빈 달은 남긴다', () => {
+    const months = [m('2026-01', 0), m('2026-02', 0), m('2026-03', 1), m('2026-04', 0), m('2026-05', 2)];
+    expect(trimLeadingEmptyMonths(months).map((x) => x.month)).toEqual(['2026-03', '2026-04', '2026-05']);
+  });
+
+  it('모두 비어 있으면 빈 배열', () => {
+    expect(trimLeadingEmptyMonths([m('2026-01', 0)])).toEqual([]);
   });
 });
 

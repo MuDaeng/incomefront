@@ -26,7 +26,7 @@ import { useMonthlyBalance } from '../api/queries';
 import type { MonthlyBalanceMonth } from '../api/types';
 import { CHART_COLORS } from '../lib/chart';
 import { formatDate, formatKrw, formatKrwCompact, formatQuantity, formatRate, toNumber } from '../lib/format';
-import { MAX_MONTHS, monthsForDateRange, totalReturnRate } from '../lib/months';
+import { MAX_MONTHS, monthsForDateRange, totalReturnRate, trimLeadingEmptyMonths } from '../lib/months';
 import { securityDetailPath } from '../lib/account';
 import { EmptyState, ErrorAlert, Loading, ProfitText } from './common';
 import { CurrencyChip } from './SecuritySearch';
@@ -40,14 +40,16 @@ const dotMonth = (month: string) => dayjs(`${month}-01`).format('YYYY.MM');
 
 /**
  * 월별 추이 (GET /balance/monthly). 기간 수익률의 날짜 범위('YYYY-MM-DD')를 받아
- * 년월로 바꿔 조회한다 (이번 달·최대 120개월로 줄임).
+ * 년월로 바꿔 조회한다 (이번 달·최대 120개월로 줄임). from이 없으면(전체) 최근 120개월을 조회하고,
+ * 첫 매수 전의 빈 달은 잘라서 보여 준다.
  */
 export function MonthlyTrendSection({
   from,
   to,
   accountId,
 }: {
-  from: string;
+  /** 없으면 처음부터 (최근 120개월) */
+  from?: string;
   to: string;
   /** 계좌 필터 (없으면 전체 계좌) */
   accountId?: number;
@@ -60,11 +62,15 @@ export function MonthlyTrendSection({
     accountId,
   );
 
+  const months = data ? trimLeadingEmptyMonths(data.months) : [];
+  // 앞쪽 빈 달을 잘랐으면 실제로 보이는 첫 달부터 표시 (그때는 120개월 제한에 걸린 것도 아님)
+  const trimmed = !!data && months.length > 0 && months.length < data.months.length;
+
   const subheader = range
     ? [
-        `${dotMonth(range.from)} ~ ${dotMonth(range.to)}`,
+        `${dotMonth(trimmed ? months[0].month : range.from)} ~ ${dotMonth(range.to)}`,
         range.cappedToCurrentMonth && '(이번 달까지)',
-        range.cappedToMaxMonths && `(최근 ${MAX_MONTHS}개월)`,
+        range.cappedToMaxMonths && !trimmed && `(최근 ${MAX_MONTHS}개월)`,
         '· 매월 말 기준, 누적배당금(세전) 포함',
       ]
         .filter(Boolean)
@@ -82,14 +88,14 @@ export function MonthlyTrendSection({
         <CardContent>
           <ErrorAlert error={error} onRetry={() => refetch()} />
         </CardContent>
-      ) : !data || data.months.every((m) => m.items.length === 0) ? (
+      ) : months.length === 0 ? (
         <EmptyState title="이 기간에 보유했던 종목이 없어요" />
       ) : (
         <>
           <CardContent sx={{ pt: 0 }}>
-            <TrendChart months={data.months} />
+            <TrendChart months={months} />
           </CardContent>
-          <MonthTable months={data.months} accountId={accountId} />
+          <MonthTable months={months} accountId={accountId} />
         </>
       )}
     </Card>

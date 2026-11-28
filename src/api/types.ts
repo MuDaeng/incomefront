@@ -41,7 +41,8 @@ export interface DailyPrice {
 export interface DailyPriceResponse {
   security: SecurityInfo;
   from: string | null;
-  to: string | null;
+  /** 입력값, 생략하면 오늘 (조회는 끝까지) */
+  to: string;
   prices: DailyPrice[];
 }
 
@@ -482,7 +483,8 @@ export interface ScheduledDividends {
 
 export interface DividendHistoryResponse {
   from: string | null;
-  to: string | null;
+  /** 입력값, 생략하면 오늘 (조회는 끝까지라 scheduled는 이 날짜 이후) */
+  to: string;
   /** 기간 총배당금 (지급일이 오늘 이하인 지급분만) */
   total: DividendSummary;
   /** 월별 배당 내역 (월 오름차순, 지급분만) */
@@ -580,7 +582,8 @@ export interface TotalReturnSummary extends AfterTaxReturnFields {
 }
 
 export interface PeriodReturnResponse {
-  from: string;
+  /** 입력값, 생략하면 null (= 처음부터) */
+  from: string | null;
   to: string;
   exchangeRate: string | null;
   exchangeRateDate: string | null;

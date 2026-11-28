@@ -46,8 +46,8 @@ export const queryKeys = {
     [...BALANCE_KEY, 'purchases', securityId, accountId ?? null] as const,
   dividends: (from?: string, to?: string, accountId?: number) =>
     [...BALANCE_KEY, 'dividends', from ?? null, to ?? null, accountId ?? null] as const,
-  returns: (from: string, to: string, accountId?: number) =>
-    [...BALANCE_KEY, 'returns', from, to, accountId ?? null] as const,
+  returns: (from: string | undefined, to: string, accountId?: number) =>
+    [...BALANCE_KEY, 'returns', from ?? null, to, accountId ?? null] as const,
   monthly: (from: string, to: string, accountId?: number) =>
     [...BALANCE_KEY, 'monthly', from, to, accountId ?? null] as const,
   dividendMetrics: (accountId?: number) =>
@@ -119,8 +119,8 @@ export const useDividendMetrics = (accountId?: number) =>
     placeholderData: keepPreviousData,
   });
 
-/** 기간 수익률. accountId를 주면 그 계좌 매수분·보유 수량으로만 계산 */
-export const usePeriodReturn = (from: string, to: string, accountId?: number) =>
+/** 기간 수익률. from을 생략하면 처음부터(모든 매수분의 기준금액 = 원금). accountId를 주면 그 계좌 매수분·보유 수량으로만 계산 */
+export const usePeriodReturn = (from: string | undefined, to: string, accountId?: number) =>
   useQuery({
     queryKey: queryKeys.returns(from, to, accountId),
     queryFn: ({ signal }) =>

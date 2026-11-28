@@ -19,22 +19,28 @@ export interface MonthRange {
  * 기간 수익률의 날짜 범위('YYYY-MM-DD')를 월별 추이 API용 년월 범위로 바꾼다.
  * - to는 이번 달까지로 줄인다 (백엔드는 미래 달을 400으로 거부)
  * - 120개월을 넘으면 to 기준 최근 120개월로 from을 당긴다
+ * - from이 없으면(전체 = 처음부터) to 기준 최근 120개월 (첫 매수 전 빈 달은 trimLeadingEmptyMonths로 자른다)
  * - 그래도 from > to(시작이 미래)면 조회할 달이 없으므로 null
  * @param today 'YYYY-MM-DD'
  */
-export function monthsForDateRange(from: string, to: string, today: string): MonthRange | null {
+export function monthsForDateRange(
+  from: string | undefined,
+  to: string,
+  today: string,
+): MonthRange | null {
   const currentMonth = today.slice(0, 7);
-  let fromMonth = from.slice(0, 7);
   let toMonth = to.slice(0, 7);
 
   const cappedToCurrentMonth = toMonth > currentMonth;
   if (cappedToCurrentMonth) toMonth = currentMonth;
-  if (fromMonth > toMonth) return null;
 
   const earliest = dayjs(`${toMonth}-01`)
     .subtract(MAX_MONTHS - 1, 'month')
     .format('YYYY-MM');
-  const cappedToMaxMonths = fromMonth < earliest;
+  let fromMonth = from ? from.slice(0, 7) : earliest;
+  if (fromMonth > toMonth) return null;
+
+  const cappedToMaxMonths = !from || fromMonth < earliest;
   if (cappedToMaxMonths) fromMonth = earliest;
 
   return { from: fromMonth, to: toMonth, cappedToCurrentMonth, cappedToMaxMonths };
@@ -49,4 +55,10 @@ export function totalReturnRate(
   const total = toNumber(totalAmount);
   if (!purchase || Number.isNaN(purchase) || Number.isNaN(total)) return null;
   return ((total - purchase) / purchase) * 100;
+}
+
+/** 앞쪽의 빈 달(보유·배당 종목이 없는 달, 첫 매수 전)을 잘라낸다. 중간·뒤쪽 빈 달은 그대로 둔다 */
+export function trimLeadingEmptyMonths<T extends { items: unknown[] }>(months: T[]): T[] {
+  const first = months.findIndex((m) => m.items.length > 0);
+  return first === -1 ? [] : months.slice(first);
 }
